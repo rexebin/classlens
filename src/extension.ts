@@ -164,7 +164,7 @@ class ClassLensProvider implements CodeLensProvider {
           const mothers = symbol.filter(
             e =>
               e.containerName === codeLens.baseClassName &&
-              e.name === codeLens.propertyOrMethodName
+              e.name.replace("()", "") === codeLens.propertyOrMethodName
           );
 
           if (mothers.length === 1) {
