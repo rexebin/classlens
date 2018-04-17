@@ -10,6 +10,11 @@
   },
   "categories": ["Other"],
   "activationEvents": ["onLanguage:typescript"],
+  "capabilities": {
+    "codeLensProvider": {
+      "resolveProvider": "true"
+    }
+  },
   "main": "./out/extension",
   "contributes": {},
   "scripts": {

@@ -2,6 +2,22 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
+import {
+  CodeLens,
+  Uri,
+  Command,
+  CodeLensProvider,
+  ProviderResult,
+  TextDocument,
+  CancellationToken,
+  commands,
+  SymbolInformation,
+  SymbolKind
+} from "vscode";
+
+let isSplit = vscode.workspace
+  .getConfiguration("openFile")
+  .get<boolean>("openSideBySide");
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -13,81 +29,198 @@ export function activate(context: vscode.ExtensionContext) {
   // The command has been defined in the package.json file
   // Now provide the implementation of the command with  registerCommand
   // The commandId parameter must match the command field in package.json
-  let disposable = vscode.commands.registerCommand("extension.sayHello", () => {
-    // The code you place here will be executed every time your command is executed
-
-    // Display a message box to the user
-    vscode.window.showInformationMessage("Hello World!");
-  });
 
   context.subscriptions.push(
-    disposable,
+    vscode.commands.registerCommand(
+      "classLens.gotoParent",
+      (symbol: SymbolInformation) => {
+        // The code you place here will be executed every time your command is executed
+        const activeTextEditor = vscode.window.activeTextEditor;
+        if (!activeTextEditor) {
+          return;
+        }
+        vscode.workspace.openTextDocument(symbol.location.uri).then(doc => {
+          vscode.window.showTextDocument(symbol.location.uri, {
+            viewColumn: isSplit
+              ? vscode.ViewColumn.Two
+              : activeTextEditor.viewColumn,
+            selection: new vscode.Range(
+              symbol.location.range.start,
+              symbol.location.range.start
+            )
+          });
+        });
+        // Display a message box to the user
+        // _openFile(symbol.location.uri.path);
+      }
+    ),
     vscode.languages.registerCodeLensProvider(
-      {
-        language: "typescript",
-        scheme: "file"
-      },
+      { language: "typescript", scheme: "file" },
       new ClassLensProvider()
-    )
+    ),
+    vscode.workspace.onDidChangeConfiguration(() => {
+      isSplit = vscode.workspace
+        .getConfiguration("openFile")
+        .get("openSideBySide");
+    })
   );
+}
+
+class ClassMemberLens extends CodeLens {
+  className: string;
+  uri: Uri;
+  propertyOrMethodName: string;
+
+  baseClassName: string;
+  constructor(
+    range: vscode.Range,
+    uri: Uri,
+    className: string,
+    propertyOrMethodName: string,
+    baseClassName: string,
+    command?: Command
+  ) {
+    super(range, command);
+    this.className = className;
+    this.uri = uri;
+    this.propertyOrMethodName = propertyOrMethodName;
+    this.baseClassName = baseClassName;
+  }
 }
 
 // this method is called when your extension is deactivated
 export function deactivate() {}
 
-class ClassLensProvider implements vscode.CodeLensProvider {
+class ClassLensProvider implements CodeLensProvider {
   provideCodeLenses(
-    document: vscode.TextDocument,
+    document: TextDocument,
+    token: CancellationToken
+  ): CodeLens[] | Thenable<vscode.CodeLens[]> {
+    return vscode.commands
+      .executeCommand<vscode.SymbolInformation[]>(
+        "vscode.executeDocumentSymbolProvider",
+        document.uri
+      )
+      .then(symbols => {
+        if (!symbols || symbols.length === 0) {
+          return [];
+        }
+        let classes = symbols.filter(
+          element => element.kind === vscode.SymbolKind.Class
+        );
+        var result: CodeLens[] = [];
+        classes.forEach(c => {
+          const lineText = document.getText(c.location.range);
+          const classIndex = lineText.indexOf(c.name);
+          if (classIndex === -1) {
+            return [];
+          }
+          let parentsAndInterfaces = lineText.slice(classIndex + c.name.length);
+          parentsAndInterfaces = parentsAndInterfaces.slice(
+            0,
+            parentsAndInterfaces.indexOf("{")
+          );
+          let parentClassName = parentsAndInterfaces.match(/(extends)\s(\w+)/);
+          if (!parentClassName) {
+            return [];
+          }
+          let parent = parentClassName[0].replace("extends", "").trim();
+          symbols
+            .filter(
+              e =>
+                e.containerName === c.name &&
+                (e.kind === SymbolKind.Property || e.kind === SymbolKind.Method)
+            )
+            .map(pm => {
+              result.push(
+                new ClassMemberLens(
+                  pm.location.range,
+                  document.uri,
+                  c.name,
+                  pm.name,
+                  parent
+                )
+              );
+            });
+        });
+        return result;
+      });
+  }
+
+  resolveCodeLens(
+    codeLens: CodeLens,
     token: vscode.CancellationToken
-  ): vscode.ProviderResult<vscode.CodeLens[]> {
-    throw new Error("Method not implemented.");
+  ): ProviderResult<CodeLens> {
+    if (codeLens instanceof ClassMemberLens) {
+      return commands
+        .executeCommand<SymbolInformation[]>(
+          "vscode.executeWorkspaceSymbolProvider",
+          codeLens.propertyOrMethodName
+        )
+        .then(symbol => {
+          if (!symbol) {
+            return;
+          }
+          const mothers = symbol.filter(
+            e =>
+              e.containerName === codeLens.baseClassName &&
+              e.name === codeLens.propertyOrMethodName
+          );
+
+          if (mothers.length === 1) {
+            return new CodeLens(mothers[0].location.range, {
+              command: "classLens.gotoParent",
+              title: `override`,
+              arguments: [mothers[0]]
+            });
+          }
+        });
+    }
   }
 }
 
-vscode.workspace.onDidOpenTextDocument(document => {
-  getSymboles(document);
-});
-
-vscode.workspace.onDidChangeTextDocument(document => {
-  getSymboles(document.document);
-});
-
-function getSymboles(document: vscode.TextDocument) {
-  vscode.commands
-    .executeCommand<vscode.SymbolInformation[]>(
-      "vscode.executeDocumentSymbolProvider",
-      document.uri
-    )
-    .then(result => {
-      if (!result) {
+function _openFile(targetFile: string): Promise<vscode.TextDocument> {
+  return new Promise((resolve, reject) => {
+    // if file is already opened, set focus to the file.
+    vscode.window.visibleTextEditors.forEach(editor => {
+      if (editor.document.fileName === targetFile) {
+        vscode.window.showTextDocument(editor.document, editor.viewColumn).then(
+          () => {
+            resolve(editor.document);
+          },
+          err => {
+            reject(err);
+          }
+        );
+        resolve();
         return;
       }
-      console.log(result);
-      let classes: vscode.SymbolInformation[] = [];
-
-      classes = result.filter(
-        element => element.kind === vscode.SymbolKind.Class
-      );
-
-      classes.forEach(c => {
-        const properties = result.filter(
-          e =>
-            e.kind === vscode.SymbolKind.Property && e.containerName === c.name
-        );
-        const methods = result.filter(
-          e => e.kind === vscode.SymbolKind.Method && e.containerName === c.name
-        );
-        console.log(properties);
-        console.log(methods);
-        const lineText = document.getText(c.location.range);
-        console.log(lineText);
-        const implementsIndex = lineText.indexOf(c.name);
-        if (implementsIndex === -1) {
-          return;
-        }
-        let interfaces = lineText.slice(implementsIndex + c.name.length);
-        interfaces = interfaces.slice(0, interfaces.indexOf("{"));
-        console.log(interfaces);
-      });
     });
+    // if we come this far, open file.
+    const activeTextEditor = vscode.window.activeTextEditor;
+    if (!activeTextEditor) {
+      reject();
+      return;
+    }
+    vscode.workspace.openTextDocument(targetFile).then(
+      doc => {
+        vscode.window
+          .showTextDocument(
+            doc,
+            isSplit ? vscode.ViewColumn.Two : activeTextEditor.viewColumn
+          )
+          .then(
+            () => {
+              resolve(doc);
+            },
+            err => {
+              reject(err);
+            }
+          );
+      },
+      err => {
+        reject(err);
+      }
+    );
+  });
 }
