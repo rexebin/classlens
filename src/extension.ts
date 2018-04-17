@@ -174,6 +174,10 @@ class ClassLensProvider implements CodeLensProvider {
               arguments: [mothers[0]]
             });
           }
+          return new CodeLens(codeLens.range, {
+            command: "",
+            title: ""
+          });
         });
     }
   }
