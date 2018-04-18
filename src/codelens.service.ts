@@ -23,7 +23,7 @@ export function getCodeLens(
     if (kind === SymbolKind.Interface) {
       return new CodeLens(propertyMethodSymbol.location.range, {
         command: "classLens.gotoParent",
-        title: `interface`,
+        title: `interface: ${parentSymbol.name}`,
         arguments: [basePropertyMethod[0]]
       });
     }
