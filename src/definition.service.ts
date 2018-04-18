@@ -1,18 +1,16 @@
 import { Uri, Position, Location, commands } from "vscode";
 
-export function getDefinitionLocation(
+export async function getDefinitionLocation(
   uri: Uri,
   position: Position
-): Thenable<Location | undefined> {
-  return commands
-    .executeCommand<Location[]>(
-      "vscode.executeDefinitionProvider",
-      uri,
-      position
-    )
-    .then(locations => {
-      if (locations) {
-        return locations[0];
-      }
-    });
+): Promise<Location | undefined> {
+  const locations = await commands.executeCommand<Location[]>(
+    "vscode.executeDefinitionProvider",
+    uri,
+    position
+  );
+
+  if (locations) {
+    return locations[0];
+  }
 }

@@ -1,21 +1,31 @@
-import { SymbolInformation, CodeLens } from "vscode";
+import { SymbolInformation, CodeLens, SymbolKind } from "vscode";
 
 export function getCodeLens(
   propertyMethodSymbol: SymbolInformation,
-  baseClassSymbol: SymbolInformation,
-  baseClassSymbols: SymbolInformation[]
+  parentSymbol: SymbolInformation,
+  symbolsOfParent: SymbolInformation[],
+  kind: SymbolKind
 ): CodeLens | undefined {
-  const basePropertyMethod = baseClassSymbols.filter(
+  const basePropertyMethod = symbolsOfParent.filter(
     s =>
       s.name === propertyMethodSymbol.name &&
-      s.containerName === baseClassSymbol.name
+      s.containerName === parentSymbol.name
   );
 
   if (basePropertyMethod.length === 1) {
-    return new CodeLens(propertyMethodSymbol.location.range, {
-      command: "classLens.gotoParent",
-      title: `override`,
-      arguments: [basePropertyMethod[0]]
-    });
+    if (kind === SymbolKind.Class) {
+      return new CodeLens(propertyMethodSymbol.location.range, {
+        command: "classLens.gotoParent",
+        title: `override`,
+        arguments: [basePropertyMethod[0]]
+      });
+    }
+    if (kind === SymbolKind.Interface) {
+      return new CodeLens(propertyMethodSymbol.location.range, {
+        command: "classLens.gotoParent",
+        title: `interface`,
+        arguments: [basePropertyMethod[0]]
+      });
+    }
   }
 }

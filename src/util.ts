@@ -1,7 +1,42 @@
 import { SymbolInformation } from "vscode";
 const baseClassRegex = /(class)(\s+)(\w+)(\s+)(extends)/;
 const interfaceRegex = /(implements)(\s+)/;
-export function getBaseClass(
+
+export function getInterfaceSymbols(
+  documentText: string,
+  className: string,
+  symbols: SymbolInformation[]
+): SymbolInformation[] {
+  const classIndex = documentText.indexOf(className);
+  if (classIndex === -1) {
+    return [];
+  }
+  let parentsAndInterfaces = documentText.slice(classIndex + className.length);
+  const implementsIndex = parentsAndInterfaces.indexOf("implements");
+  let interfaces: string[] = [];
+  if (implementsIndex >= 0) {
+    let interfacesText = parentsAndInterfaces.slice(
+      implementsIndex + "implements".length
+    );
+    interfaces = interfacesText
+      .slice(0, interfacesText.indexOf("{"))
+      .split(",");
+    if (interfaces) {
+      interfaces = interfaces.map(i => i.trim());
+    }
+  }
+
+  let interfaceSymbols: SymbolInformation[] = [];
+  interfaces.forEach(i => {
+    const s = symbols.filter(s => s.name === i);
+    if (s) {
+      interfaceSymbols.push(s[0]);
+    }
+  });
+  return interfaceSymbols;
+}
+
+export function getBaseClassSymbol(
   text: string,
   className: string,
   symbols: SymbolInformation[]

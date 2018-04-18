@@ -12,7 +12,12 @@ import {
   SymbolKind
 } from "vscode";
 import { getDefinitionLocation } from "./definition.service";
-import { hasBaseClass, getBaseClass } from "./util";
+import {
+  hasBaseClass,
+  getBaseClassSymbol,
+  hasInterfaces,
+  getInterfaceSymbols
+} from "./util";
 import { getCodeLens } from "./codelens.service";
 import { getSymbolsByUri, getSymbolsOpenedUri } from "./symbols.service";
 
@@ -40,17 +45,22 @@ export function activate(context: vscode.ExtensionContext) {
         if (!activeTextEditor) {
           return;
         }
-        vscode.workspace.openTextDocument(symbol.location.uri).then(doc => {
-          vscode.window.showTextDocument(symbol.location.uri, {
-            viewColumn: isSplit
-              ? vscode.ViewColumn.Two
-              : activeTextEditor.viewColumn,
-            selection: new vscode.Range(
-              symbol.location.range.start,
-              symbol.location.range.start
-            )
-          });
-        });
+        vscode.workspace.openTextDocument(symbol.location.uri).then(
+          doc => {
+            vscode.window.showTextDocument(symbol.location.uri, {
+              viewColumn: isSplit
+                ? vscode.ViewColumn.Two
+                : activeTextEditor.viewColumn,
+              selection: new vscode.Range(
+                symbol.location.range.start,
+                symbol.location.range.start
+              )
+            });
+          },
+          error => {
+            console.log(error);
+          }
+        );
         // Display a message box to the user
         // _openFile(symbol.location.uri.path);
       }
@@ -58,6 +68,10 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.languages.registerCodeLensProvider(
       { language: "typescript", scheme: "file" },
       new BaseClassProvider()
+    ),
+    vscode.languages.registerCodeLensProvider(
+      { language: "typescript", scheme: "file" },
+      new InterfaceCodeLensProvider()
     ),
     vscode.workspace.onDidChangeConfiguration(() => {
       isSplit = vscode.workspace
@@ -70,8 +84,11 @@ export function activate(context: vscode.ExtensionContext) {
 // this method is called when your extension is deactivated
 export function deactivate() {}
 
+export interface SymboleCache {
+  [name: string]: SymbolInformation[];
+}
 class BaseClassProvider implements CodeLensProvider {
-  symbolCache: { [className: string]: SymbolInformation[] } = {};
+  symbolCache: SymboleCache = {};
   provideCodeLenses(
     document: TextDocument,
     token: CancellationToken
@@ -80,83 +97,166 @@ class BaseClassProvider implements CodeLensProvider {
     if (!hasBaseClass(text)) {
       return [];
     }
-    let promises: Promise<CodeLens | undefined>[] = [];
+    this.symbolCache = {};
+    const codelens = this.provideCodelens(document);
+    return codelens;
+  }
 
-    let lens: CodeLens[] = [];
-    return getSymbolsOpenedUri(document.uri).then(symbols => {
-      if (!symbols || symbols.length === 0) {
-        return [];
-      }
-      symbols
-        .filter(
-          s => s.kind === SymbolKind.Property || s.kind === SymbolKind.Method
-        )
-        .map(s => {
-          const className = s.containerName;
-          const baseClassSymbol = getBaseClass(text, className, symbols);
-          if (!baseClassSymbol) {
-            return;
-          }
-          return { symbol: s, baseClass: baseClassSymbol };
-        })
-        .filter(i => i !== undefined)
-        .forEach(result => {
-          if (!result) {
-            return;
-          }
-          promises.push(
-            this.getOverideCodeLens(
-              result.symbol,
-              result.baseClass,
-              document.uri
-            )
-          );
-        });
-      return Promise.all(promises).then(values => {
-        values.forEach(v => {
-          if (v) {
-            lens.push(v);
-          }
-        });
-        return lens;
+  async provideCodelens(document: TextDocument): Promise<CodeLens[]> {
+    const text = document.getText();
+    const symbols = await getSymbolsOpenedUri(document.uri);
+    if (!symbols || symbols.length === 0) {
+      return [];
+    }
+    let promises: Promise<CodeLens | undefined>[] = [];
+    symbols
+      .filter(
+        s => s.kind === SymbolKind.Property || s.kind === SymbolKind.Method
+      )
+      .map(s => {
+        const className = s.containerName;
+        const baseClassSymbol = getBaseClassSymbol(text, className, symbols);
+        if (!baseClassSymbol) {
+          return;
+        }
+        return { symbol: s, baseClass: baseClassSymbol };
+      })
+      .filter(i => i !== undefined)
+      .map(result => {
+        if (!result) {
+          return;
+        }
+        promises.push(
+          this.getOverideCodeLens(result.symbol, result.baseClass, document.uri)
+        );
       });
+
+    return <Promise<CodeLens[]>>Promise.all(promises).then(values => {
+      return values.filter(v => v !== undefined);
     });
   }
 
-  getOverideCodeLens(
+  async getOverideCodeLens(
     propertyMethodSymbol: SymbolInformation,
-    baseClassSymbol: SymbolInformation,
+    parentSymbol: SymbolInformation,
     uri: Uri
   ): Promise<CodeLens | undefined> {
-    return new Promise((resolve, reject) => {
-      if (this.symbolCache[baseClassSymbol.name]) {
-        const codeLens = getCodeLens(
-          propertyMethodSymbol,
-          baseClassSymbol,
-          this.symbolCache[baseClassSymbol.name]
-        );
+    if (this.symbolCache[parentSymbol.name]) {
+      const codeLens = getCodeLens(
+        propertyMethodSymbol,
+        parentSymbol,
+        this.symbolCache[parentSymbol.name],
+        SymbolKind.Class
+      );
 
-        resolve(codeLens);
-      } else {
-        getDefinitionLocation(uri, baseClassSymbol.location.range.start).then(
-          location => {
-            if (!location) {
-              resolve();
-              return;
-            }
-            getSymbolsByUri(location.uri).then(symbols => {
-              if (!symbols) {
-                resolve();
-                return;
-              }
-              this.symbolCache[baseClassSymbol.name] = symbols;
-              resolve(
-                getCodeLens(propertyMethodSymbol, baseClassSymbol, symbols)
-              );
-            });
-          }
-        );
+      return codeLens;
+    } else {
+      const location = await getDefinitionLocation(
+        uri,
+        parentSymbol.location.range.start
+      );
+      if (!location) {
+        return;
       }
+      const symbols = await getSymbolsByUri(location.uri);
+      if (!symbols) {
+        return;
+      }
+      this.symbolCache[parentSymbol.name] = symbols;
+      return getCodeLens(
+        propertyMethodSymbol,
+        parentSymbol,
+        symbols,
+        SymbolKind.Class
+      );
+    }
+  }
+}
+
+class InterfaceCodeLensProvider implements CodeLensProvider {
+  symbolCache: SymboleCache = {};
+  provideCodeLenses(
+    document: vscode.TextDocument,
+    token: vscode.CancellationToken
+  ): vscode.ProviderResult<vscode.CodeLens[]> {
+    const text = document.getText();
+    if (!hasInterfaces(text)) {
+      return [];
+    }
+    this.symbolCache = {};
+    return this.provideInterfaceCodeLens(document);
+  }
+
+  async provideInterfaceCodeLens(document: TextDocument): Promise<CodeLens[]> {
+    const text = document.getText();
+    let promises: Promise<CodeLens | undefined>[] = [];
+    const symbols = await getSymbolsOpenedUri(document.uri);
+    if (!symbols || symbols.length === 0) {
+      return [];
+    }
+    symbols
+      .filter(
+        s => s.kind === SymbolKind.Property || s.kind === SymbolKind.Method
+      )
+      .map(s => {
+        const className = s.containerName;
+        const interfaceSymbols = getInterfaceSymbols(text, className, symbols);
+        if (!interfaceSymbols || interfaceSymbols.length === 0) {
+          return;
+        }
+        return { symbol: s, interfaces: interfaceSymbols };
+      })
+      .filter(i => i !== undefined)
+      .map(result => {
+        if (!result) {
+          return;
+        }
+        result.interfaces.forEach(i => {
+          promises.push(
+            this.getInterfaceCodeLens(result.symbol, i, document.uri)
+          );
+        });
+      });
+    return <Promise<CodeLens[]>>Promise.all(promises).then(values => {
+      return values.filter(v => v !== undefined);
     });
+  }
+
+  async getInterfaceCodeLens(
+    propertyMethodSymbol: SymbolInformation,
+    parentSymbol: SymbolInformation,
+    uri: Uri
+  ): Promise<CodeLens | undefined> {
+    if (this.symbolCache[parentSymbol.name]) {
+      const codeLens = getCodeLens(
+        propertyMethodSymbol,
+        parentSymbol,
+        this.symbolCache[parentSymbol.name],
+        SymbolKind.Interface
+      );
+
+      return codeLens;
+    } else {
+      const location = await getDefinitionLocation(
+        uri,
+        parentSymbol.location.range.start
+      );
+
+      if (!location) {
+        return;
+      }
+      const symbols = await getSymbolsByUri(location.uri);
+
+      if (!symbols) {
+        return;
+      }
+      this.symbolCache[parentSymbol.name] = symbols;
+      return getCodeLens(
+        propertyMethodSymbol,
+        parentSymbol,
+        symbols,
+        SymbolKind.Interface
+      );
+    }
   }
 }
