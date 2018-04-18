@@ -4,13 +4,17 @@ export async function getDefinitionLocation(
   uri: Uri,
   position: Position
 ): Promise<Location | undefined> {
-  const locations = await commands.executeCommand<Location[]>(
-    "vscode.executeDefinitionProvider",
-    uri,
-    position
-  );
+  try {
+    const locations = await commands.executeCommand<Location[]>(
+      "vscode.executeDefinitionProvider",
+      uri,
+      position
+    );
 
-  if (locations) {
-    return locations[0];
+    if (locations) {
+      return locations[0];
+    }
+  } catch (error) {
+    console.log(error);
   }
 }

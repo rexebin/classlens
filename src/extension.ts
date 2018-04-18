@@ -98,42 +98,51 @@ class BaseClassProvider implements CodeLensProvider {
       return [];
     }
     this.symbolCache = {};
-    const codelens = this.provideCodelens(document);
-    return codelens;
+    console.log("reset log");
+    return this.provideCodelens(document);
   }
 
   async provideCodelens(document: TextDocument): Promise<CodeLens[]> {
-    const text = document.getText();
-    const symbols = await getSymbolsOpenedUri(document.uri);
-    if (!symbols || symbols.length === 0) {
+    try {
+      const text = document.getText();
+      const symbols = await getSymbolsOpenedUri(document.uri);
+      if (!symbols || symbols.length === 0) {
+        return [];
+      }
+      let promises: Promise<CodeLens | undefined>[] = [];
+      symbols
+        .filter(
+          s => s.kind === SymbolKind.Property || s.kind === SymbolKind.Method
+        )
+        .map(s => {
+          const className = s.containerName;
+          const baseClassSymbol = getBaseClassSymbol(text, className, symbols);
+          if (!baseClassSymbol) {
+            return;
+          }
+          return { symbol: s, baseClass: baseClassSymbol };
+        })
+        .filter(i => i !== undefined)
+        .map(result => {
+          if (!result) {
+            return;
+          }
+          promises.push(
+            this.getOverideCodeLens(
+              result.symbol,
+              result.baseClass,
+              document.uri
+            )
+          );
+        });
+
+      return <Promise<CodeLens[]>>Promise.all(promises).then(values => {
+        return values.filter(v => v !== undefined);
+      });
+    } catch (error) {
+      console.log(error);
       return [];
     }
-    let promises: Promise<CodeLens | undefined>[] = [];
-    symbols
-      .filter(
-        s => s.kind === SymbolKind.Property || s.kind === SymbolKind.Method
-      )
-      .map(s => {
-        const className = s.containerName;
-        const baseClassSymbol = getBaseClassSymbol(text, className, symbols);
-        if (!baseClassSymbol) {
-          return;
-        }
-        return { symbol: s, baseClass: baseClassSymbol };
-      })
-      .filter(i => i !== undefined)
-      .map(result => {
-        if (!result) {
-          return;
-        }
-        promises.push(
-          this.getOverideCodeLens(result.symbol, result.baseClass, document.uri)
-        );
-      });
-
-    return <Promise<CodeLens[]>>Promise.all(promises).then(values => {
-      return values.filter(v => v !== undefined);
-    });
   }
 
   async getOverideCodeLens(
@@ -141,34 +150,38 @@ class BaseClassProvider implements CodeLensProvider {
     parentSymbol: SymbolInformation,
     uri: Uri
   ): Promise<CodeLens | undefined> {
-    if (this.symbolCache[parentSymbol.name]) {
-      const codeLens = getCodeLens(
-        propertyMethodSymbol,
-        parentSymbol,
-        this.symbolCache[parentSymbol.name],
-        SymbolKind.Class
-      );
+    try {
+      if (this.symbolCache[parentSymbol.name]) {
+        const codeLens = getCodeLens(
+          propertyMethodSymbol,
+          parentSymbol,
+          this.symbolCache[parentSymbol.name],
+          SymbolKind.Class
+        );
 
-      return codeLens;
-    } else {
-      const location = await getDefinitionLocation(
-        uri,
-        parentSymbol.location.range.start
-      );
-      if (!location) {
-        return;
+        return codeLens;
+      } else {
+        const location = await getDefinitionLocation(
+          uri,
+          parentSymbol.location.range.start
+        );
+        if (!location) {
+          return;
+        }
+        const symbols = await getSymbolsByUri(location.uri);
+        if (!symbols) {
+          return;
+        }
+        this.symbolCache[parentSymbol.name] = symbols;
+        return getCodeLens(
+          propertyMethodSymbol,
+          parentSymbol,
+          symbols,
+          SymbolKind.Class
+        );
       }
-      const symbols = await getSymbolsByUri(location.uri);
-      if (!symbols) {
-        return;
-      }
-      this.symbolCache[parentSymbol.name] = symbols;
-      return getCodeLens(
-        propertyMethodSymbol,
-        parentSymbol,
-        symbols,
-        SymbolKind.Class
-      );
+    } catch (error) {
+      console.log(error);
     }
   }
 }
@@ -188,38 +201,47 @@ class InterfaceCodeLensProvider implements CodeLensProvider {
   }
 
   async provideInterfaceCodeLens(document: TextDocument): Promise<CodeLens[]> {
-    const text = document.getText();
-    let promises: Promise<CodeLens | undefined>[] = [];
-    const symbols = await getSymbolsOpenedUri(document.uri);
-    if (!symbols || symbols.length === 0) {
+    try {
+      const text = document.getText();
+      let promises: Promise<CodeLens | undefined>[] = [];
+      const symbols = await getSymbolsOpenedUri(document.uri);
+      if (!symbols || symbols.length === 0) {
+        return [];
+      }
+      symbols
+        .filter(
+          s => s.kind === SymbolKind.Property || s.kind === SymbolKind.Method
+        )
+        .map(s => {
+          const className = s.containerName;
+          const interfaceSymbols = getInterfaceSymbols(
+            text,
+            className,
+            symbols
+          );
+          if (!interfaceSymbols || interfaceSymbols.length === 0) {
+            return;
+          }
+          return { symbol: s, interfaces: interfaceSymbols };
+        })
+        .filter(i => i !== undefined)
+        .map(result => {
+          if (!result) {
+            return;
+          }
+          result.interfaces.forEach(i => {
+            promises.push(
+              this.getInterfaceCodeLens(result.symbol, i, document.uri)
+            );
+          });
+        });
+      return <Promise<CodeLens[]>>Promise.all(promises).then(values => {
+        return values.filter(v => v !== undefined);
+      });
+    } catch (error) {
+      console.log(error);
       return [];
     }
-    symbols
-      .filter(
-        s => s.kind === SymbolKind.Property || s.kind === SymbolKind.Method
-      )
-      .map(s => {
-        const className = s.containerName;
-        const interfaceSymbols = getInterfaceSymbols(text, className, symbols);
-        if (!interfaceSymbols || interfaceSymbols.length === 0) {
-          return;
-        }
-        return { symbol: s, interfaces: interfaceSymbols };
-      })
-      .filter(i => i !== undefined)
-      .map(result => {
-        if (!result) {
-          return;
-        }
-        result.interfaces.forEach(i => {
-          promises.push(
-            this.getInterfaceCodeLens(result.symbol, i, document.uri)
-          );
-        });
-      });
-    return <Promise<CodeLens[]>>Promise.all(promises).then(values => {
-      return values.filter(v => v !== undefined);
-    });
   }
 
   async getInterfaceCodeLens(
@@ -227,36 +249,41 @@ class InterfaceCodeLensProvider implements CodeLensProvider {
     parentSymbol: SymbolInformation,
     uri: Uri
   ): Promise<CodeLens | undefined> {
-    if (this.symbolCache[parentSymbol.name]) {
-      const codeLens = getCodeLens(
-        propertyMethodSymbol,
-        parentSymbol,
-        this.symbolCache[parentSymbol.name],
-        SymbolKind.Interface
-      );
+    try {
+      if (this.symbolCache[parentSymbol.name]) {
+        const codeLens = getCodeLens(
+          propertyMethodSymbol,
+          parentSymbol,
+          this.symbolCache[parentSymbol.name],
+          SymbolKind.Interface
+        );
 
-      return codeLens;
-    } else {
-      const location = await getDefinitionLocation(
-        uri,
-        parentSymbol.location.range.start
-      );
+        return codeLens;
+      } else {
+        const location = await getDefinitionLocation(
+          uri,
+          parentSymbol.location.range.start
+        );
 
-      if (!location) {
-        return;
+        if (!location) {
+          return;
+        }
+        const symbols = await getSymbolsByUri(location.uri);
+
+        if (!symbols) {
+          return;
+        }
+        this.symbolCache[parentSymbol.name] = symbols;
+        return getCodeLens(
+          propertyMethodSymbol,
+          parentSymbol,
+          symbols,
+          SymbolKind.Interface
+        );
       }
-      const symbols = await getSymbolsByUri(location.uri);
-
-      if (!symbols) {
-        return;
-      }
-      this.symbolCache[parentSymbol.name] = symbols;
-      return getCodeLens(
-        propertyMethodSymbol,
-        parentSymbol,
-        symbols,
-        SymbolKind.Interface
-      );
+    } catch (error) {
+      console.log(error);
+      return;
     }
   }
 }
