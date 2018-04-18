@@ -16,14 +16,14 @@ export function getCodeLens(
     if (kind === SymbolKind.Class) {
       return new CodeLens(propertyMethodSymbol.location.range, {
         command: "classLens.gotoParent",
-        title: `override`,
+        title: `overrides`,
         arguments: [basePropertyMethod[0]]
       });
     }
     if (kind === SymbolKind.Interface) {
       return new CodeLens(propertyMethodSymbol.location.range, {
         command: "classLens.gotoParent",
-        title: `interface: ${parentSymbol.name}`,
+        title: `implements: ${parentSymbol.name}`,
         arguments: [basePropertyMethod[0]]
       });
     }

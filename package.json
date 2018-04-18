@@ -10,13 +10,19 @@
   },
   "categories": ["Other"],
   "activationEvents": ["onLanguage:typescript"],
-  "capabilities": {
-    "codeLensProvider": {
-      "resolveProvider": "true"
+  "contributes": {
+    "configuration": {
+      "title": "Side by side",
+      "properties": {
+        "classLens.openSideBySide": {
+          "type": "boolean",
+          "default": true,
+          "description": "Open files side by side to the Typescript file."
+        }
+      }
     }
   },
   "main": "./out/extension",
-  "contributes": {},
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
