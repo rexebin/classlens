@@ -16,7 +16,7 @@ export function getCodeLens(
     if (kind === SymbolKind.Class) {
       return new CodeLens(propertyMethodSymbol.location.range, {
         command: "classLens.gotoParent",
-        title: `overrides`,
+        title: `override`,
         arguments: [basePropertyMethod[0]]
       });
     }
