@@ -5,15 +5,16 @@ import * as vscode from "vscode";
 import {
   CodeLens,
   Uri,
-  Command,
   CodeLensProvider,
-  ProviderResult,
   TextDocument,
   CancellationToken,
-  commands,
   SymbolInformation,
   SymbolKind
 } from "vscode";
+import { getDefinitionLocation } from "./definition.service";
+import { hasBaseClass, getBaseClass } from "./util";
+import { getCodeLens } from "./codelens.service";
+import { getSymbolsByUri, getSymbolsOpenedUri } from "./symbols.service";
 
 let isSplit = vscode.workspace
   .getConfiguration("openFile")
@@ -56,7 +57,7 @@ export function activate(context: vscode.ExtensionContext) {
     ),
     vscode.languages.registerCodeLensProvider(
       { language: "typescript", scheme: "file" },
-      new ClassLensProvider()
+      new BaseClassProvider()
     ),
     vscode.workspace.onDidChangeConfiguration(() => {
       isSplit = vscode.workspace
@@ -66,119 +67,96 @@ export function activate(context: vscode.ExtensionContext) {
   );
 }
 
-class ClassMemberLens extends CodeLens {
-  className: string;
-  uri: Uri;
-  propertyOrMethodName: string;
-
-  baseClassName: string;
-  constructor(
-    range: vscode.Range,
-    uri: Uri,
-    className: string,
-    propertyOrMethodName: string,
-    baseClassName: string,
-    command?: Command
-  ) {
-    super(range, command);
-    this.className = className;
-    this.uri = uri;
-    this.propertyOrMethodName = propertyOrMethodName;
-    this.baseClassName = baseClassName;
-  }
-}
-
 // this method is called when your extension is deactivated
 export function deactivate() {}
 
-class ClassLensProvider implements CodeLensProvider {
+class BaseClassProvider implements CodeLensProvider {
+  symbolCache: { [className: string]: SymbolInformation[] } = {};
   provideCodeLenses(
     document: TextDocument,
     token: CancellationToken
   ): CodeLens[] | Thenable<vscode.CodeLens[]> {
-    return vscode.commands
-      .executeCommand<vscode.SymbolInformation[]>(
-        "vscode.executeDocumentSymbolProvider",
-        document.uri
-      )
-      .then(symbols => {
-        if (!symbols || symbols.length === 0) {
-          return [];
-        }
-        let classes = symbols.filter(
-          element => element.kind === vscode.SymbolKind.Class
-        );
-        var result: CodeLens[] = [];
-        classes.forEach(c => {
-          const lineText = document.getText(c.location.range);
-          const classIndex = lineText.indexOf(c.name);
-          if (classIndex === -1) {
-            return [];
-          }
-          let parentsAndInterfaces = lineText.slice(classIndex + c.name.length);
-          parentsAndInterfaces = parentsAndInterfaces.slice(
-            0,
-            parentsAndInterfaces.indexOf("{")
-          );
-          let parentClassName = parentsAndInterfaces.match(/(extends)\s(\w+)/);
-          if (!parentClassName) {
-            return [];
-          }
-          let parent = parentClassName[0].replace("extends", "").trim();
-          symbols
-            .filter(
-              e =>
-                e.containerName === c.name &&
-                (e.kind === SymbolKind.Property || e.kind === SymbolKind.Method)
-            )
-            .map(pm => {
-              result.push(
-                new ClassMemberLens(
-                  pm.location.range,
-                  document.uri,
-                  c.name,
-                  pm.name,
-                  parent
-                )
-              );
-            });
-        });
-        return result;
-      });
-  }
+    const text = document.getText();
+    if (!hasBaseClass(text)) {
+      return [];
+    }
+    let promises: Promise<CodeLens | undefined>[] = [];
 
-  resolveCodeLens(
-    codeLens: CodeLens,
-    token: vscode.CancellationToken
-  ): ProviderResult<CodeLens> {
-    if (codeLens instanceof ClassMemberLens) {
-      return commands
-        .executeCommand<SymbolInformation[]>(
-          "vscode.executeWorkspaceSymbolProvider",
-          codeLens.propertyOrMethodName
+    let lens: CodeLens[] = [];
+    return getSymbolsOpenedUri(document.uri).then(symbols => {
+      if (!symbols || symbols.length === 0) {
+        return [];
+      }
+      symbols
+        .filter(
+          s => s.kind === SymbolKind.Property || s.kind === SymbolKind.Method
         )
-        .then(symbol => {
-          if (!symbol) {
+        .map(s => {
+          const className = s.containerName;
+          const baseClassSymbol = getBaseClass(text, className, symbols);
+          if (!baseClassSymbol) {
             return;
           }
-          const mothers = symbol.filter(
-            e =>
-              e.containerName === codeLens.baseClassName &&
-              e.name.replace("()", "") === codeLens.propertyOrMethodName
+          return { symbol: s, baseClass: baseClassSymbol };
+        })
+        .filter(i => i !== undefined)
+        .forEach(result => {
+          if (!result) {
+            return;
+          }
+          promises.push(
+            this.getOverideCodeLens(
+              result.symbol,
+              result.baseClass,
+              document.uri
+            )
           );
+        });
+      return Promise.all(promises).then(values => {
+        values.forEach(v => {
+          if (v) {
+            lens.push(v);
+          }
+        });
+        return lens;
+      });
+    });
+  }
 
-          if (mothers.length === 1) {
-            return new CodeLens(mothers[0].location.range, {
-              command: "classLens.gotoParent",
-              title: `override`,
-              arguments: [mothers[0]]
+  getOverideCodeLens(
+    propertyMethodSymbol: SymbolInformation,
+    baseClassSymbol: SymbolInformation,
+    uri: Uri
+  ): Promise<CodeLens | undefined> {
+    return new Promise((resolve, reject) => {
+      if (this.symbolCache[baseClassSymbol.name]) {
+        const codeLens = getCodeLens(
+          propertyMethodSymbol,
+          baseClassSymbol,
+          this.symbolCache[baseClassSymbol.name]
+        );
+
+        resolve(codeLens);
+      } else {
+        getDefinitionLocation(uri, baseClassSymbol.location.range.start).then(
+          location => {
+            if (!location) {
+              resolve();
+              return;
+            }
+            getSymbolsByUri(location.uri).then(symbols => {
+              if (!symbols) {
+                resolve();
+                return;
+              }
+              this.symbolCache[baseClassSymbol.name] = symbols;
+              resolve(
+                getCodeLens(propertyMethodSymbol, baseClassSymbol, symbols)
+              );
             });
           }
-          return new CodeLens(codeLens.range, {
-            command: "",
-            title: ""
-          });
-        });
-    }
+        );
+      }
+    });
   }
 }
