@@ -5,7 +5,7 @@ import { BaseClassProvider, InterfaceCodeLensProvider } from "./providers";
 import { CacheProvider } from "./utils";
 import { gotoParent, gotoParentCommandName } from "./commands";
 import { updateConfig } from "./configuration";
-import { supportedDocument } from "./configuration/document-selector";
+import { supportedDocument } from "./configuration";
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed

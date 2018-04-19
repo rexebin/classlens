@@ -9,6 +9,9 @@ export interface SymboleCache {
   parentSymbols: SymbolInformation[];
 }
 
+/**
+ * Cache storage. Cache symbols of parents, relevent to current file.
+ */
 export class CacheProvider {
   static symbolCache: SymboleCache[] = [];
 }
