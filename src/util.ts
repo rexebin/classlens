@@ -1,17 +1,20 @@
-import { SymbolInformation, CodeLens } from "vscode";
+import { SymbolInformation, CodeLens, TextDocument } from "vscode";
 const baseClassRegex = /(class)(\s+)(\w+)(\s+)(extends)/;
 const interfaceRegex = /(implements)(\s+)/;
 
 export function getInterfaceSymbols(
-  documentText: string,
-  className: string,
+  doc: TextDocument,
+  classSymbol: SymbolInformation,
   symbols: SymbolInformation[]
 ): SymbolInformation[] {
-  const classIndex = documentText.indexOf(className);
+  const classText = doc.getText(classSymbol.location.range);
+  const classIndex = classText.indexOf("class " + classSymbol.name);
   if (classIndex === -1) {
     return [];
   }
-  let parentsAndInterfaces = documentText.slice(classIndex + className.length);
+  let parentsAndInterfaces = classText.slice(
+    classIndex + classSymbol.name.length + "class ".length
+  );
   const implementsIndex = parentsAndInterfaces.indexOf("implements");
   let interfaces: string[] = [];
   if (implementsIndex >= 0) {
@@ -39,15 +42,18 @@ export function getInterfaceSymbols(
 }
 
 export function getBaseClassSymbol(
-  text: string,
-  className: string,
+  doc: TextDocument,
+  classSymbol: SymbolInformation,
   symbols: SymbolInformation[]
 ): SymbolInformation | undefined {
-  const classIndex = text.indexOf(className);
+  const classText = doc.getText(classSymbol.location.range);
+  const classIndex = classText.indexOf("class " + classSymbol.name);
   if (classIndex === -1) {
     return;
   }
-  let parentsAndInterfaces = text.slice(classIndex + className.length);
+  let parentsAndInterfaces = classText.slice(
+    classIndex + classSymbol.name.length + "class ".length
+  );
   parentsAndInterfaces = parentsAndInterfaces.slice(
     0,
     parentsAndInterfaces.indexOf("{")

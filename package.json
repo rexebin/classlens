@@ -3,7 +3,7 @@
   "displayName": "ClassLens",
   "description":
     "Class lens showing relationships with its interfaces and parent class.",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "publisher": "rexebin",
   "engines": {
     "vscode": "^1.22.0"
@@ -13,7 +13,7 @@
     "url": "https://github.com/rexebin/classlens"
   },
   "categories": ["Languages", "Other"],
-  "activationEvents": ["onLanguage:typescript"],
+  "activationEvents": ["onLanguage:typescript", "onLanguage:javascript"],
   "contributes": {
     "configuration": {
       "title": "Side by side",

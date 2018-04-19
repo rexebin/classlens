@@ -61,11 +61,17 @@ export function activate(context: vscode.ExtensionContext) {
       }
     ),
     vscode.languages.registerCodeLensProvider(
-      { language: "typescript", scheme: "file" },
+      [
+        { language: "typescript", scheme: "file" },
+        { language: "javascript", scheme: "file" }
+      ],
       new BaseClassProvider()
     ),
     vscode.languages.registerCodeLensProvider(
-      { language: "typescript", scheme: "file" },
+      [
+        { language: "typescript", scheme: "file" },
+        { language: "javascript", scheme: "file" }
+      ],
       new InterfaceCodeLensProvider()
     ),
     vscode.workspace.onDidChangeConfiguration(() => {
@@ -108,7 +114,6 @@ class BaseClassProvider implements CodeLensProvider {
 
   async provideBaseClassCodelens(document: TextDocument): Promise<CodeLens[]> {
     try {
-      const text = document.getText();
       const symbols = await getSymbolsOpenedUri(document.uri);
       if (!symbols || symbols.length === 0) {
         return [];
@@ -120,7 +125,12 @@ class BaseClassProvider implements CodeLensProvider {
         )
         .map(s => {
           const className = s.containerName;
-          const baseClassSymbol = getBaseClassSymbol(text, className, symbols);
+          const classSymbol = symbols.filter(s => s.name === className)[0];
+          const baseClassSymbol = getBaseClassSymbol(
+            document,
+            classSymbol,
+            symbols
+          );
           if (!baseClassSymbol) {
             return;
           }
@@ -136,7 +146,8 @@ class BaseClassProvider implements CodeLensProvider {
               result.symbol,
               result.baseClass,
               document.uri,
-              SymbolKind.Class
+              SymbolKind.Class,
+              symbols
             )
           );
         });
@@ -163,7 +174,6 @@ class InterfaceCodeLensProvider implements CodeLensProvider {
 
   async provideInterfaceCodeLens(document: TextDocument): Promise<CodeLens[]> {
     try {
-      const text = document.getText();
       let promises: Promise<CodeLens | undefined>[] = [];
       const symbols = await getSymbolsOpenedUri(document.uri);
       if (!symbols || symbols.length === 0) {
@@ -175,9 +185,10 @@ class InterfaceCodeLensProvider implements CodeLensProvider {
         )
         .map(s => {
           const className = s.containerName;
+          const classSymbol = symbols.filter(s => s.name === className)[0];
           const interfaceSymbols = getInterfaceSymbols(
-            text,
-            className,
+            document,
+            classSymbol,
             symbols
           );
           if (!interfaceSymbols || interfaceSymbols.length === 0) {
@@ -196,7 +207,8 @@ class InterfaceCodeLensProvider implements CodeLensProvider {
                 result.symbol,
                 i,
                 document.uri,
-                SymbolKind.Interface
+                SymbolKind.Interface,
+                symbols
               )
             );
           });
@@ -213,7 +225,8 @@ async function getCodeLensForMember(
   propertyMethodSymbol: SymbolInformation,
   parentSymbol: SymbolInformation,
   uri: Uri,
-  kind: SymbolKind
+  kind: SymbolKind,
+  symbolsCurrent: SymbolInformation[]
 ): Promise<CodeLens | undefined> {
   try {
     const currentFileName = parentSymbol.location.uri.fsPath;
@@ -232,6 +245,14 @@ async function getCodeLensForMember(
 
       return codeLens;
     } else {
+      // check if the parent class/interface is in the current file.
+      let symbols = symbolsCurrent.filter(
+        s => s.containerName === parentSymbol.name
+      );
+      if (symbols.length > 0) {
+        return getCodeLens(propertyMethodSymbol, parentSymbol, symbols, kind);
+      }
+
       const location = await getDefinitionLocation(
         uri,
         parentSymbol.location.range.start
@@ -239,8 +260,8 @@ async function getCodeLensForMember(
       if (!location) {
         return;
       }
-      const symbols = await getSymbolsByUri(location.uri);
-      if (!symbols) {
+      const symbolsRemote = await getSymbolsByUri(location.uri);
+      if (!symbolsRemote) {
         return;
       }
       if (
@@ -256,12 +277,16 @@ async function getCodeLensForMember(
             currentFileName: currentFileName,
             parentSymbolName: parentSymbol.name,
             parentFileName: location.uri.fsPath,
-            parentSymbols: symbols
+            parentSymbols: symbolsRemote
           }
         ];
       }
-
-      return getCodeLens(propertyMethodSymbol, parentSymbol, symbols, kind);
+      return getCodeLens(
+        propertyMethodSymbol,
+        parentSymbol,
+        symbolsRemote,
+        kind
+      );
     }
   } catch (error) {
     console.log(error);

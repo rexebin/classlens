@@ -17,7 +17,7 @@ ClassLens also allows you to quickly navigate to the parent member by clicking o
 "classLens.openSideBySide": false
 ```
 
-Important: ClassLens is a TypeSCript Codelens extension, it requires CodeLens to be enabled to be triggered.
+Important: ClassLens is a TypeScript and JavaScript Codelens extension, it requires CodeLens to be enabled to be triggered.
 
 # Links
 

@@ -9,7 +9,8 @@ export function getCodeLens(
   const basePropertyMethod = symbolsOfParent.filter(
     s =>
       s.name === propertyMethodSymbol.name &&
-      s.containerName === parentSymbol.name
+      s.containerName === parentSymbol.name &&
+      s.containerName !== propertyMethodSymbol.containerName
   );
 
   if (basePropertyMethod.length === 1) {
