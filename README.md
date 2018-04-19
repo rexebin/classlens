@@ -1,6 +1,10 @@
-# classlens
+# ClassLens
 
-I switch from Webstorm to VSCode and find myself missing a feature miserably: the ability to see which members in a TypeScript class are overides to a base class and which members are interface implementations with a glance in the very class, plus the ability to go to the parent member quickly. Failing to find anything in the Marketplace, I finally made this extension **ClassLens**, just to do what Webstorm does with VSCode CodeLens.
+![ClassLens](./classlens.png "Showcase")
+
+![ClassLens](./classlens.gif "Showcase")
+
+I switch from Webstorm to VSCode and find myself missing a feature miserably: the ability to see which members in a TypeScript class are overides to a base class and which members are interface implementations with a glance in the very class, plus the ability to go to the parent member quickly. Failing to find anything in the Marketplace, I finally made this extension **ClassLens**, just to do what Webstorm does in VSCode in the form of CodeLens.
 
 As the name implies, it is a Codelens extension marking the following members in a opened class with CodeLens enabled:
 
@@ -17,4 +21,4 @@ Important: ClassLens is a TypeSCript Codelens extension, it requires CodeLens to
 
 # Repository
 
-[source](https://github.com/rexebin/classlens)
+[Github Repository](https://github.com/rexebin/classlens)

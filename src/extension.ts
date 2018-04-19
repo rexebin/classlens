@@ -76,8 +76,10 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidSaveTextDocument(doc => {
       const cache = symbolCache.filter(s => s.parentFileName === doc.fileName);
       if (cache) {
-        const index = symbolCache.indexOf(cache[0]);
-        symbolCache.splice(index, 1);
+        cache.forEach(c => {
+          const index = symbolCache.indexOf(c);
+          symbolCache.splice(index, 1);
+        });
       }
     })
   );

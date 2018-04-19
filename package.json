@@ -8,6 +8,7 @@
   "engines": {
     "vscode": "^1.22.0"
   },
+  "icon": "classlens.png",
   "repository": {
     "url": "https://github.com/rexebin/classlens"
   },
