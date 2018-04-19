@@ -3,7 +3,7 @@
   "displayName": "ClassLens",
   "description":
     "Class lens showing relationships with its interfaces and parent class.",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "publisher": "rexebin",
   "engines": {
     "vscode": "^1.22.0"
@@ -26,6 +26,17 @@
       }
     }
   },
+  "keywords": [
+    "codelens",
+    "typescript",
+    "class",
+    "hierarchy",
+    "inheritance",
+    "override",
+    "interface",
+    "implements",
+    "extends"
+  ],
   "main": "./out/extension",
   "scripts": {
     "vscode:prepublish": "npm run compile",
