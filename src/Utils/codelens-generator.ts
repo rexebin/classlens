@@ -4,48 +4,16 @@ import { SymbolInformation, CodeLens, SymbolKind, Uri } from "vscode";
 import { getDefinitionLocation } from "./definition.command";
 import { getSymbolsByUri } from "./symbols";
 import { CacheProvider } from "./cache";
+
 /**
- * Return Codelens for a given property/method symbol.
  *
- * Look for the same symbol in symbols from parent's definition file, if find exactly one, return codelens.
- *
- * @param propertyMethodSymbol: the property or method symbol to get CodeLens for
- * @param parentSymbol: the parent symbol read from property's file, has same uri as above parameter.
- * @param symbolsOfParent: all symbols in the parent's definition file
- * @param kind indicate what type of CodeLens the caller is after.
+ * @param propertyMethodSymbol property or method symbol to get Codelens for.
+ * @param parentSymbol parent symbol
+ * @param uri document uri for the above property or method symbol
+ * @param kind indicate which type of codelens the caller expect.
+ * @param symbolsCurrent all symbols in the file where the first parameters are.
  */
-export function getCodeLens(
-  propertyMethodSymbol: SymbolInformation,
-  parentSymbol: SymbolInformation,
-  symbolsOfParent: SymbolInformation[],
-  kind: SymbolKind
-): CodeLens | undefined {
-  const basePropertyMethod = symbolsOfParent.filter(
-    s =>
-      s.name === propertyMethodSymbol.name &&
-      s.containerName === parentSymbol.name &&
-      s.containerName !== propertyMethodSymbol.containerName
-  );
-
-  if (basePropertyMethod.length === 1) {
-    if (kind === SymbolKind.Class) {
-      return new CodeLens(propertyMethodSymbol.location.range, {
-        command: "classLens.gotoParent",
-        title: `override`,
-        arguments: [basePropertyMethod[0]]
-      });
-    }
-    if (kind === SymbolKind.Interface) {
-      return new CodeLens(propertyMethodSymbol.location.range, {
-        command: "classLens.gotoParent",
-        title: `implements: ${parentSymbol.name}`,
-        arguments: [basePropertyMethod[0]]
-      });
-    }
-  }
-}
-
-export async function getCodeLensForMember(
+export async function computeCodeLensForMember(
   propertyMethodSymbol: SymbolInformation,
   parentSymbol: SymbolInformation,
   uri: Uri,
@@ -53,6 +21,10 @@ export async function getCodeLensForMember(
   symbolsCurrent: SymbolInformation[]
 ): Promise<CodeLens | undefined> {
   try {
+    /**
+     * Check if the cache has symbols of the parent class/interface file.
+     * if true, generate codelens for the given property/method.
+     */
     const currentFileName = parentSymbol.location.uri.fsPath;
     const cache = CacheProvider.symbolCache.filter(
       c =>
@@ -60,7 +32,7 @@ export async function getCodeLensForMember(
         c.parentSymbolName === parentSymbol.name
     );
     if (cache.length > 0 && cache[0].parentSymbols.length > 0) {
-      const codeLens = getCodeLens(
+      const codeLens = generateCodeLens(
         propertyMethodSymbol,
         parentSymbol,
         cache[0].parentSymbols,
@@ -70,13 +42,28 @@ export async function getCodeLensForMember(
       return codeLens;
     } else {
       // check if the parent class/interface is in the current file.
+      // if found in the current file's symbol, then generate codelens based on the symbols from current file.
       let symbols = symbolsCurrent.filter(
         s => s.containerName === parentSymbol.name
       );
       if (symbols.length > 0) {
-        return getCodeLens(propertyMethodSymbol, parentSymbol, symbols, kind);
+        return generateCodeLens(
+          propertyMethodSymbol,
+          parentSymbol,
+          symbols,
+          kind
+        );
       }
 
+      /**
+       * if we are here, then the parent symbol is not in the current file.
+       * 1. excuete definition provider to look for the parent file.
+       * 2. if location not found, return. There should be a single location found,
+       *  because the symbol in the current file indicate that definition provider will find one that is imported.
+       * 3. run symbol provider against the location found, get a list of symobls of the parent class/interface's file.
+       * 4. save the above symbols to cache.
+       * 5. generate codelens for the given child symbol against the above parent symbols.
+       */
       const location = await getDefinitionLocation(
         uri,
         parentSymbol.location.range.start
@@ -105,7 +92,7 @@ export async function getCodeLensForMember(
           }
         ];
       }
-      return getCodeLens(
+      return generateCodeLens(
         propertyMethodSymbol,
         parentSymbol,
         symbolsRemote,
@@ -114,5 +101,46 @@ export async function getCodeLensForMember(
     }
   } catch (error) {
     console.log(error);
+  }
+}
+
+/**
+ * Return Codelens for a given property/method symbol.
+ *
+ * Look for the same symbol in symbols from parent's definition file, if find exactly one, return codelens.
+ *
+ * @param propertyMethodSymbol: the property or method symbol to get CodeLens for
+ * @param parentSymbol: the parent symbol read from property's file, has same uri as above parameter.
+ * @param symbolsOfParent: all symbols in the parent's definition file
+ * @param kind indicate what type of CodeLens the caller is after.
+ */
+export function generateCodeLens(
+  propertyMethodSymbol: SymbolInformation,
+  parentSymbol: SymbolInformation,
+  symbolsOfParent: SymbolInformation[],
+  kind: SymbolKind
+): CodeLens | undefined {
+  const basePropertyMethod = symbolsOfParent.filter(
+    s =>
+      s.name === propertyMethodSymbol.name &&
+      s.containerName === parentSymbol.name &&
+      s.containerName !== propertyMethodSymbol.containerName
+  );
+
+  if (basePropertyMethod.length === 1) {
+    if (kind === SymbolKind.Class) {
+      return new CodeLens(propertyMethodSymbol.location.range, {
+        command: "classLens.gotoParent",
+        title: `override`,
+        arguments: [basePropertyMethod[0]]
+      });
+    }
+    if (kind === SymbolKind.Interface) {
+      return new CodeLens(propertyMethodSymbol.location.range, {
+        command: "classLens.gotoParent",
+        title: `implements: ${parentSymbol.name}`,
+        arguments: [basePropertyMethod[0]]
+      });
+    }
   }
 }

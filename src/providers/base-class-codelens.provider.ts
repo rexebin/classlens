@@ -10,7 +10,7 @@ import {
 import {
   excutePromises,
   getBaseClassSymbol,
-  getCodeLensForMember,
+  computeCodeLensForMember,
   getSymbolsOpenedUri,
   hasBaseClass
 } from "../utils";
@@ -78,7 +78,7 @@ export class BaseClassProvider implements CodeLensProvider {
             return;
           }
           promises.push(
-            getCodeLensForMember(
+            computeCodeLensForMember(
               result.symbol,
               result.baseClass,
               document.uri,

@@ -18,7 +18,7 @@ export const gotoParent = (symbol: SymbolInformation) => {
   if (!activeTextEditor) {
     return;
   }
-  workspace.openTextDocument(symbol.location.uri).then(
+  return workspace.openTextDocument(symbol.location.uri).then(
     doc => {
       window.showTextDocument(symbol.location.uri, {
         viewColumn: Config.isSplit

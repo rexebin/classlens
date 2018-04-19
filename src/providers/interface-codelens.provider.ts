@@ -10,7 +10,7 @@ import {
 } from "vscode";
 import {
   excutePromises,
-  getCodeLensForMember,
+  computeCodeLensForMember,
   getInterfaceSymbols,
   getSymbolsOpenedUri,
   hasInterfaces
@@ -78,7 +78,7 @@ export class InterfaceCodeLensProvider implements CodeLensProvider {
           }
           result.interfaces.forEach(i => {
             promises.push(
-              getCodeLensForMember(
+              computeCodeLensForMember(
                 result.symbol,
                 i,
                 document.uri,
