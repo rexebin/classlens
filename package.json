@@ -30,12 +30,9 @@
     "codelens",
     "typescript",
     "class",
-    "hierarchy",
-    "inheritance",
-    "override",
     "interface",
-    "implements",
-    "extends"
+    "hierarchy",
+    "inheritance"
   ],
   "main": "./out/extension",
   "scripts": {
