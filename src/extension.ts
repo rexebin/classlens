@@ -1,21 +1,11 @@
 "use strict";
 
-import {
-  SymbolInformation,
-  workspace,
-  ExtensionContext,
-  window,
-  commands,
-  Range,
-  ViewColumn,
-  languages
-} from "vscode";
+import { workspace, ExtensionContext, commands, languages } from "vscode";
 import { BaseClassProvider, InterfaceCodeLensProvider } from "./providers";
 import { CacheProvider } from "./utils";
-
-let isSplit = workspace
-  .getConfiguration("classLens")
-  .get<boolean>("openSideBySide");
+import { gotoParent, gotoParentCommandName } from "./commands";
+import { updateConfig } from "./configuration";
+import { supportedDocument } from "./configuration/document-selector";
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -25,49 +15,16 @@ export function activate(context: ExtensionContext) {
   // The commandId parameter must match the command field in package.json
 
   context.subscriptions.push(
-    commands.registerCommand(
-      "classLens.gotoParent",
-      (symbol: SymbolInformation) => {
-        // The code you place here will be executed every time your command is executed
-        const activeTextEditor = window.activeTextEditor;
-        if (!activeTextEditor) {
-          return;
-        }
-        workspace.openTextDocument(symbol.location.uri).then(
-          doc => {
-            window.showTextDocument(symbol.location.uri, {
-              viewColumn: isSplit
-                ? ViewColumn.Two
-                : activeTextEditor.viewColumn,
-              selection: new Range(
-                symbol.location.range.start,
-                symbol.location.range.start
-              )
-            });
-          },
-          error => {
-            console.log(error);
-          }
-        );
-      }
-    ),
+    commands.registerCommand(gotoParentCommandName, gotoParent),
     languages.registerCodeLensProvider(
-      [
-        { language: "typescript", scheme: "file" },
-        { language: "javascript", scheme: "file" }
-      ],
+      supportedDocument,
       new BaseClassProvider()
     ),
     languages.registerCodeLensProvider(
-      [
-        { language: "typescript", scheme: "file" },
-        { language: "javascript", scheme: "file" }
-      ],
+      supportedDocument,
       new InterfaceCodeLensProvider()
     ),
-    workspace.onDidChangeConfiguration(() => {
-      isSplit = workspace.getConfiguration("classLens").get("openSideBySide");
-    }),
+    workspace.onDidChangeConfiguration(updateConfig),
     workspace.onDidSaveTextDocument(doc => {
       const cache = CacheProvider.symbolCache.filter(
         s => s.parentFileName === doc.fileName
