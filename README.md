@@ -19,6 +19,8 @@ ClassLens also allows you to quickly navigate to the parent member by clicking o
 
 Important: ClassLens is a TypeSCript Codelens extension, it requires CodeLens to be enabled to be triggered.
 
-# Repository
+# Links
 
 [Github Repository](https://github.com/rexebin/classlens)
+
+[Install ClassLens from VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=rexebin.classlens)
