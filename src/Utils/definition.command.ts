@@ -1,3 +1,5 @@
+"use strict";
+
 import { Uri, Position, Location, commands } from "vscode";
 
 export async function getDefinitionLocation(

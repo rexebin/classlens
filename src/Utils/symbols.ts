@@ -1,6 +1,43 @@
-import { SymbolInformation, CodeLens, TextDocument } from "vscode";
-const baseClassRegex = /(class)(\s+)(\w+)(\s+)(extends)/;
-const interfaceRegex = /(implements)(\s+)/;
+"use strict";
+
+import {
+  Uri,
+  SymbolInformation,
+  workspace,
+  commands,
+  TextDocument
+} from "vscode";
+
+export function getSymbolsByUri(
+  uri: Uri
+): Thenable<SymbolInformation[] | undefined> {
+  return workspace.openTextDocument(uri).then(
+    doc => {
+      return getSymbolsOpenedUri(doc.uri);
+    },
+    error => {
+      console.log(error);
+    }
+  );
+}
+
+export function getSymbolsOpenedUri(
+  uri: Uri
+): Thenable<SymbolInformation[] | undefined> {
+  return commands
+    .executeCommand<SymbolInformation[]>(
+      "vscode.executeDocumentSymbolProvider",
+      uri
+    )
+    .then(
+      symbols => {
+        return symbols;
+      },
+      error => {
+        console.log(error);
+      }
+    );
+}
 
 export function getInterfaceSymbols(
   doc: TextDocument,
@@ -66,44 +103,4 @@ export function getBaseClassSymbol(
   return symbols.filter(
     s => s.name.replace(/(<).+(>)/, "") === c.replace(/(<).+(>)/, "")
   )[0];
-}
-
-export function hasBaseClass(document: string): boolean {
-  const map = document.match(baseClassRegex);
-  if (map && map.length > 0) {
-    return true;
-  }
-  return false;
-}
-
-export function hasInterfaces(document: string): boolean {
-  const map = document.match(interfaceRegex);
-  if (map && map.length > 0) {
-    return true;
-  }
-  return false;
-}
-export function excutePromises(
-  promises: Promise<CodeLens | undefined>[]
-): Promise<CodeLens[]> {
-  return new Promise((resolve, reject) => {
-    const results: CodeLens[] = [];
-    let count = 0;
-    promises.forEach((promise, idx) => {
-      promise
-        .catch(error => {
-          console.log(error);
-          return error;
-        })
-        .then(valueOrError => {
-          if (!(valueOrError instanceof Error) && valueOrError !== undefined) {
-            results.push(valueOrError);
-          }
-          count += 1;
-          if (count === promises.length) {
-            resolve(results);
-          }
-        });
-    });
-  });
 }
