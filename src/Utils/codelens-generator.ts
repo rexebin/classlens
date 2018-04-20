@@ -1,9 +1,19 @@
 "use strict";
 
-import { CodeLens, SymbolInformation, SymbolKind, Uri } from "vscode";
+import {
+  DecorationOptions,
+  DecorationRenderOptions,
+  SymbolInformation,
+  SymbolKind,
+  TextEditorDecorationType,
+  Uri,
+  window
+} from "vscode";
+import { decorateEditor } from "../decorator";
 import { CacheProvider } from "./cache";
 import { getDefinitionLocation } from "./definition.command";
 import { getSymbolsByUri } from "./symbols";
+import { ContextExtension } from "../extension";
 /**
  * Return Codelens for a given property/method symbol.
  *
@@ -14,44 +24,58 @@ import { getSymbolsByUri } from "./symbols";
  * @param symbolsOfParent: all symbols in the parent's definition file
  * @param kind indicate what type of CodeLens the caller is after.
  */
-export async function getCodeLens(
+export async function decorate(
   propertyMethodSymbol: SymbolInformation,
   parentSymbol: SymbolInformation,
   symbolsOfParent: SymbolInformation[],
   kind: SymbolKind
-): Promise<CodeLens | undefined> {
+) {
   const basePropertyMethod = symbolsOfParent.filter(
     s =>
       s.name === propertyMethodSymbol.name &&
       s.containerName === parentSymbol.name &&
       s.containerName !== propertyMethodSymbol.containerName
   );
-
+  if (!ContextExtension.context) {
+    console.log("error");
+  }
+  let decorationRenderOptions: DecorationRenderOptions = {
+    gutterIconPath: ContextExtension.context.asAbsolutePath(
+      "../../classlens.png"
+    ),
+    gutterIconSize: "contain"
+  };
+  let textEditorDecorationType: TextEditorDecorationType = window.createTextEditorDecorationType(
+    <any>decorationRenderOptions
+  );
   if (basePropertyMethod.length === 1) {
     if (kind === SymbolKind.Class) {
-      return new CodeLens(propertyMethodSymbol.location.range, {
-        command: "classLens.gotoParent",
-        title: `override`,
-        arguments: [basePropertyMethod[0]]
-      });
-    }
-    if (kind === SymbolKind.Interface) {
-      return new CodeLens(propertyMethodSymbol.location.range, {
-        command: "classLens.gotoParent",
-        title: `implements: ${parentSymbol.name}`,
-        arguments: [basePropertyMethod[0]]
-      });
+      const decorateOptions: DecorationOptions[] = [
+        {
+          range: propertyMethodSymbol.location.range,
+          hoverMessage: `Override ${parentSymbol.name}`
+        }
+      ];
+      return decorateEditor(textEditorDecorationType, decorateOptions);
+    } else if (kind === SymbolKind.Interface) {
+      const decorateOptions: DecorationOptions[] = [
+        {
+          range: propertyMethodSymbol.location.range,
+          hoverMessage: `implements ${parentSymbol.name}`
+        }
+      ];
+      return decorateEditor(textEditorDecorationType, decorateOptions);
     }
   }
 }
 
-export async function getCodeLensForMember(
+export async function decorateMember(
   propertyMethodSymbol: SymbolInformation,
   parentSymbol: SymbolInformation,
   uri: Uri,
   kind: SymbolKind,
   symbolsCurrent: SymbolInformation[]
-): Promise<CodeLens | undefined> {
+) {
   try {
     /**
      * Check if the cache has symbols of the parent class/interface file.
@@ -64,7 +88,7 @@ export async function getCodeLensForMember(
         c.parentSymbolName === parentSymbol.name
     );
     if (cache.length > 0 && cache[0].parentSymbols.length > 0) {
-      return await getCodeLens(
+      decorate(
         propertyMethodSymbol,
         parentSymbol,
         cache[0].parentSymbols,
@@ -76,12 +100,7 @@ export async function getCodeLensForMember(
         s => s.containerName === parentSymbol.name
       );
       if (symbols.length > 0) {
-        return await getCodeLens(
-          propertyMethodSymbol,
-          parentSymbol,
-          symbols,
-          kind
-        );
+        decorate(propertyMethodSymbol, parentSymbol, symbols, kind);
       }
 
       /**
@@ -104,7 +123,7 @@ export async function getCodeLensForMember(
         c => c.parentFileName === location.uri.fsPath
       );
       if (cache.length === 1) {
-        return await getCodeLens(
+        decorate(
           propertyMethodSymbol,
           parentSymbol,
           cache[0].parentSymbols,
@@ -129,12 +148,7 @@ export async function getCodeLensForMember(
           }
         ];
       }
-      return await getCodeLens(
-        propertyMethodSymbol,
-        parentSymbol,
-        symbolsRemote,
-        kind
-      );
+      decorate(propertyMethodSymbol, parentSymbol, symbolsRemote, kind);
     }
   } catch (error) {
     throw error;
