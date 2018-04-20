@@ -1,7 +1,7 @@
 "use strict";
 
 import { CodeLens } from "vscode";
-const baseClassRegex = /(class)(\s+)(\w+)(\s+)(extends)/;
+const baseClassRegex = /(class)(\s+)(\w+)(<\w+>)?(\s+)(extends)/;
 const interfaceRegex = /(implements)(\s+)/;
 
 /**
