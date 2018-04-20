@@ -2,7 +2,7 @@
 
 import { SymbolInformation } from "vscode";
 
-export interface SymboleCache {
+export interface SymbolCache {
   currentFileName: string;
   parentSymbolName: string;
   parentFileName: string;
@@ -13,5 +13,5 @@ export interface SymboleCache {
  * Cache storage. Cache symbols of parents, relevent to current file.
  */
 export class CacheProvider {
-  static symbolCache: SymboleCache[] = [];
+  static symbolCache: SymbolCache[] = [];
 }

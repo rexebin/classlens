@@ -53,6 +53,10 @@ export async function getCodeLensForMember(
   symbolsCurrent: SymbolInformation[]
 ): Promise<CodeLens | undefined> {
   try {
+    /**
+     * Check if the cache has symbols of the parent class/interface file.
+     * if true, generate codelens for the given property/method.
+     */
     const currentFileName = parentSymbol.location.uri.fsPath;
     const cache = CacheProvider.symbolCache.filter(
       c =>
@@ -60,49 +64,52 @@ export async function getCodeLensForMember(
         c.parentSymbolName === parentSymbol.name
     );
     if (cache.length > 0 && cache[0].parentSymbols.length > 0) {
-      const codelens = await getCodeLens(
+      return await getCodeLens(
         propertyMethodSymbol,
         parentSymbol,
         cache[0].parentSymbols,
         kind
       );
-      if (codelens) {
-        return codelens;
-      }
     } else {
       // check if the parent class/interface is in the current file.
       let symbols = symbolsCurrent.filter(
         s => s.containerName === parentSymbol.name
       );
       if (symbols.length > 0) {
-        const codelens = await getCodeLens(
+        return await getCodeLens(
           propertyMethodSymbol,
           parentSymbol,
           symbols,
           kind
         );
-        if (codelens) {
-          return codelens;
-        }
       }
+
+      /**
+       * if we are here, then the parent symbol is not in the current file.
+       * 1. excuete definition provider to look for the parent file.
+       * 2. if location not found, return. There should be a single location found,
+       *  because the symbol in the current file indicate that definition provider will find one that is imported.
+       * 3. run symbol provider against the location found, get a list of symobls of the parent class/interface's file.
+       * 4. save the above symbols to cache.
+       * 5. generate codelens for the given child symbol against the above parent symbols.
+       */
       const location = await getDefinitionLocation(
         uri,
         parentSymbol.location.range.start
       );
 
+      // check if the parent class/interface's symbols are already in cache.
+
       const cache = CacheProvider.symbolCache.filter(
         c => c.parentFileName === location.uri.fsPath
       );
       if (cache.length === 1) {
-        const codelens = await getCodeLens(
+        return await getCodeLens(
           propertyMethodSymbol,
           parentSymbol,
           cache[0].parentSymbols,
           kind
         );
-        if (codelens) {
-          return codelens;
-        }
       }
       const symbolsRemote = await getSymbolsByUri(location.uri);
       if (
@@ -122,15 +129,12 @@ export async function getCodeLensForMember(
           }
         ];
       }
-      const codelens = await getCodeLens(
+      return await getCodeLens(
         propertyMethodSymbol,
         parentSymbol,
         symbolsRemote,
         kind
       );
-      if (codelens) {
-        return codelens;
-      }
     }
   } catch (error) {
     throw error;
