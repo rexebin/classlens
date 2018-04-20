@@ -8,35 +8,30 @@ import {
   TextDocument
 } from "vscode";
 
-export function getSymbolsByUri(
-  uri: Uri
-): Thenable<SymbolInformation[] | undefined> {
-  return workspace.openTextDocument(uri).then(
-    doc => {
-      return getSymbolsOpenedUri(doc.uri);
-    },
-    error => {
-      console.log(error);
-    }
-  );
+export async function getSymbolsByUri(uri: Uri): Promise<SymbolInformation[]> {
+  try {
+    const doc = await workspace.openTextDocument(uri);
+    return await getSymbolsOpenedUri(doc.uri);
+  } catch (error) {
+    throw error;
+  }
 }
 
-export function getSymbolsOpenedUri(
+export async function getSymbolsOpenedUri(
   uri: Uri
-): Thenable<SymbolInformation[] | undefined> {
-  return commands
-    .executeCommand<SymbolInformation[]>(
+): Promise<SymbolInformation[]> {
+  try {
+    const location = await commands.executeCommand<SymbolInformation[]>(
       "vscode.executeDocumentSymbolProvider",
       uri
-    )
-    .then(
-      symbols => {
-        return symbols;
-      },
-      error => {
-        console.log(error);
-      }
     );
+    if (!location) {
+      throw new Error("No Symbols found");
+    }
+    return location;
+  } catch (error) {
+    throw error;
+  }
 }
 
 export function getInterfaceSymbols(

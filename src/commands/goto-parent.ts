@@ -14,16 +14,10 @@ export const gotoParentCommandName = "classLens.gotoParent";
  */
 export const gotoParent = (symbol: SymbolInformation) => {
   // The code you place here will be executed every time your command is executed
-  const activeTextEditor = window.activeTextEditor;
-  if (!activeTextEditor) {
-    return;
-  }
   workspace.openTextDocument(symbol.location.uri).then(
     doc => {
       window.showTextDocument(symbol.location.uri, {
-        viewColumn: Config.isSplit
-          ? ViewColumn.Two
-          : activeTextEditor.viewColumn,
+        viewColumn: Config.isSplit ? ViewColumn.Two : ViewColumn.Active,
         selection: new Range(
           symbol.location.range.start,
           symbol.location.range.start
@@ -31,7 +25,7 @@ export const gotoParent = (symbol: SymbolInformation) => {
       });
     },
     error => {
-      console.log(error);
+      throw error;
     }
   );
 };

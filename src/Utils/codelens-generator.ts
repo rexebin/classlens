@@ -1,9 +1,9 @@
 "use strict";
 
-import { SymbolInformation, CodeLens, SymbolKind, Uri } from "vscode";
+import { CodeLens, SymbolInformation, SymbolKind, Uri } from "vscode";
+import { CacheProvider } from "./cache";
 import { getDefinitionLocation } from "./definition.command";
 import { getSymbolsByUri } from "./symbols";
-import { CacheProvider } from "./cache";
 /**
  * Return Codelens for a given property/method symbol.
  *
@@ -14,12 +14,12 @@ import { CacheProvider } from "./cache";
  * @param symbolsOfParent: all symbols in the parent's definition file
  * @param kind indicate what type of CodeLens the caller is after.
  */
-export function getCodeLens(
+export async function getCodeLens(
   propertyMethodSymbol: SymbolInformation,
   parentSymbol: SymbolInformation,
   symbolsOfParent: SymbolInformation[],
   kind: SymbolKind
-): CodeLens | undefined {
+): Promise<CodeLens | undefined> {
   const basePropertyMethod = symbolsOfParent.filter(
     s =>
       s.name === propertyMethodSymbol.name &&
@@ -60,34 +60,51 @@ export async function getCodeLensForMember(
         c.parentSymbolName === parentSymbol.name
     );
     if (cache.length > 0 && cache[0].parentSymbols.length > 0) {
-      const codeLens = getCodeLens(
+      const codelens = await getCodeLens(
         propertyMethodSymbol,
         parentSymbol,
         cache[0].parentSymbols,
         kind
       );
-
-      return codeLens;
+      if (codelens) {
+        return codelens;
+      }
     } else {
       // check if the parent class/interface is in the current file.
       let symbols = symbolsCurrent.filter(
         s => s.containerName === parentSymbol.name
       );
       if (symbols.length > 0) {
-        return getCodeLens(propertyMethodSymbol, parentSymbol, symbols, kind);
+        const codelens = await getCodeLens(
+          propertyMethodSymbol,
+          parentSymbol,
+          symbols,
+          kind
+        );
+        if (codelens) {
+          return codelens;
+        }
       }
-
       const location = await getDefinitionLocation(
         uri,
         parentSymbol.location.range.start
       );
-      if (!location) {
-        return;
+
+      const cache = CacheProvider.symbolCache.filter(
+        c => c.parentFileName === location.uri.fsPath
+      );
+      if (cache.length === 1) {
+        const codelens = await getCodeLens(
+          propertyMethodSymbol,
+          parentSymbol,
+          cache[0].parentSymbols,
+          kind
+        );
+        if (codelens) {
+          return codelens;
+        }
       }
       const symbolsRemote = await getSymbolsByUri(location.uri);
-      if (!symbolsRemote) {
-        return;
-      }
       if (
         CacheProvider.symbolCache.filter(
           s =>
@@ -105,14 +122,17 @@ export async function getCodeLensForMember(
           }
         ];
       }
-      return getCodeLens(
+      const codelens = await getCodeLens(
         propertyMethodSymbol,
         parentSymbol,
         symbolsRemote,
         kind
       );
+      if (codelens) {
+        return codelens;
+      }
     }
   } catch (error) {
-    console.log(error);
+    throw error;
   }
 }

@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.2.x
+
+1.  Optimise cache and performance increased
+
 ## 0.1.0
 
 1.  Add Javascript support

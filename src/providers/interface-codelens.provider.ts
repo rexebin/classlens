@@ -45,8 +45,8 @@ export class InterfaceCodeLensProvider implements CodeLensProvider {
       let promises: Promise<CodeLens | undefined>[] = [];
       const symbols = await getSymbolsOpenedUri(document.uri);
       // if there is no symbols in the current document, return;
-      if (!symbols || symbols.length === 0) {
-        return [];
+      if (symbols.length === 0) {
+        throw new Error("No symbols found");
       }
       /**
        * 1. filter out all symbols except properties and methods.
@@ -56,30 +56,25 @@ export class InterfaceCodeLensProvider implements CodeLensProvider {
        */
       symbols
         .filter(
-          s => s.kind === SymbolKind.Property || s.kind === SymbolKind.Method
+          symbol =>
+            symbol.kind === SymbolKind.Property ||
+            symbol.kind === SymbolKind.Method
         )
-        .map(s => {
-          const className = s.containerName;
+        .forEach(symbol => {
+          const className = symbol.containerName;
           const classSymbol = symbols.filter(s => s.name === className)[0];
           const interfaceSymbols = getInterfaceSymbols(
             document,
             classSymbol,
             symbols
           );
-          if (!interfaceSymbols || interfaceSymbols.length === 0) {
+          if (interfaceSymbols.length === 0) {
             return;
           }
-          return { symbol: s, interfaces: interfaceSymbols };
-        })
-        .filter(i => i !== undefined)
-        .map(result => {
-          if (!result) {
-            return;
-          }
-          result.interfaces.forEach(i => {
+          interfaceSymbols.forEach(i => {
             promises.push(
               getCodeLensForMember(
-                result.symbol,
+                symbol,
                 i,
                 document.uri,
                 SymbolKind.Interface,
@@ -90,8 +85,7 @@ export class InterfaceCodeLensProvider implements CodeLensProvider {
         });
       return excutePromises(promises);
     } catch (error) {
-      console.log(error);
-      return [];
+      throw error;
     }
   }
 }

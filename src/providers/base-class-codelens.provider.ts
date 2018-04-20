@@ -44,8 +44,8 @@ export class BaseClassProvider implements CodeLensProvider {
     try {
       const symbols = await getSymbolsOpenedUri(document.uri);
       // if there is no symbols in the current document, return;
-      if (!symbols || symbols.length === 0) {
-        return [];
+      if (symbols.length === 0) {
+        throw new Error("No Symbols found");
       }
       let promises: Promise<CodeLens | undefined>[] = [];
 
@@ -57,10 +57,12 @@ export class BaseClassProvider implements CodeLensProvider {
        */
       symbols
         .filter(
-          s => s.kind === SymbolKind.Property || s.kind === SymbolKind.Method
+          symbol =>
+            symbol.kind === SymbolKind.Property ||
+            symbol.kind === SymbolKind.Method
         )
-        .map(s => {
-          const className = s.containerName;
+        .forEach(symbol => {
+          const className = symbol.containerName;
           const classSymbol = symbols.filter(s => s.name === className)[0];
           const baseClassSymbol = getBaseClassSymbol(
             document,
@@ -70,17 +72,10 @@ export class BaseClassProvider implements CodeLensProvider {
           if (!baseClassSymbol) {
             return;
           }
-          return { symbol: s, baseClass: baseClassSymbol };
-        })
-        .filter(i => i !== undefined)
-        .map(result => {
-          if (!result) {
-            return;
-          }
           promises.push(
             getCodeLensForMember(
-              result.symbol,
-              result.baseClass,
+              symbol,
+              baseClassSymbol,
               document.uri,
               SymbolKind.Class,
               symbols
@@ -90,8 +85,7 @@ export class BaseClassProvider implements CodeLensProvider {
 
       return excutePromises(promises);
     } catch (error) {
-      console.log(error);
-      return [];
+      throw error;
     }
   }
 }
