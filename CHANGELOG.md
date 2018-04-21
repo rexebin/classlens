@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.2.2
+
+Optimise cache and increase performance.
+
 ## 0.2.1
 
 Fix: class with generic signature now work as intended.
