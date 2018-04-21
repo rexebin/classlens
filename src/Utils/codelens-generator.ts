@@ -53,6 +53,18 @@ export async function getCodeLensForMember(
   symbolsCurrent: SymbolInformation[]
 ): Promise<CodeLens | undefined> {
   try {
+     // check if the parent class/interface is in the current file.
+     let symbols = symbolsCurrent.filter(
+      s => s.containerName === parentSymbol.name
+    );
+    if (symbols.length > 0) {
+      return await getCodeLens(
+        propertyMethodSymbol,
+        parentSymbol,
+        symbols,
+        kind
+      );
+    }
     /**
      * Check if the cache has symbols of the parent class/interface file.
      * if true, generate codelens for the given property/method.
@@ -60,7 +72,7 @@ export async function getCodeLensForMember(
     const currentFileName = parentSymbol.location.uri.fsPath;
     const cache = CacheProvider.symbolCache.filter(
       c =>
-        c.currentFileName === currentFileName &&
+        c.currentFileName.indexOf(currentFileName) !== -1 &&
         c.parentSymbolName === parentSymbol.name
     );
     if (cache.length > 0 && cache[0].parentSymbols.length > 0) {
@@ -70,20 +82,7 @@ export async function getCodeLensForMember(
         cache[0].parentSymbols,
         kind
       );
-    } else {
-      // check if the parent class/interface is in the current file.
-      let symbols = symbolsCurrent.filter(
-        s => s.containerName === parentSymbol.name
-      );
-      if (symbols.length > 0) {
-        return await getCodeLens(
-          propertyMethodSymbol,
-          parentSymbol,
-          symbols,
-          kind
-        );
-      }
-
+    } else { 
       /**
        * if we are here, then the parent symbol is not in the current file.
        * 1. excuete definition provider to look for the parent file.
@@ -104,6 +103,9 @@ export async function getCodeLensForMember(
         c => c.parentFileName === location.uri.fsPath
       );
       if (cache.length === 1) {
+        if(cache[0].currentFileName.indexOf(currentFileName)=== -1){
+          cache[0].currentFileName.push(currentFileName);
+        }
         return await getCodeLens(
           propertyMethodSymbol,
           parentSymbol,
@@ -115,19 +117,18 @@ export async function getCodeLensForMember(
       if (
         CacheProvider.symbolCache.filter(
           s =>
-            s.currentFileName === currentFileName &&
+            s.currentFileName.indexOf(currentFileName) !== -1 &&
             s.parentFileName === location.uri.fsPath
         ).length === 0
       ) {
-        CacheProvider.symbolCache = [
-          ...CacheProvider.symbolCache,
+        CacheProvider.symbolCache.push(
           {
-            currentFileName: currentFileName,
+            currentFileName: [currentFileName],
             parentSymbolName: parentSymbol.name,
             parentFileName: location.uri.fsPath,
             parentSymbols: symbolsRemote
           }
-        ];
+        );
       }
       return await getCodeLens(
         propertyMethodSymbol,

@@ -3,7 +3,7 @@
 import { SymbolInformation } from "vscode";
 
 export interface SymbolCache {
-  currentFileName: string;
+  currentFileName: string[];
   parentSymbolName: string;
   parentFileName: string;
   parentSymbols: SymbolInformation[];
