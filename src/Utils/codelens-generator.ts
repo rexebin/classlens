@@ -9,59 +9,81 @@ import { getSymbolsByUri } from "./symbols";
  *
  * Look for the same symbol in symbols from parent's definition file, if find exactly one, return codelens.
  *
- * @param propertyMethodSymbol: the property or method symbol to get CodeLens for
+ * @param targetSymbols: the property or method symbol to get CodeLens for
  * @param parentSymbol: the parent symbol read from property's file, has same uri as above parameter.
  * @param symbolsOfParent: all symbols in the parent's definition file
  * @param kind indicate what type of CodeLens the caller is after.
  */
-export async function getCodeLens(
-  propertyMethodSymbol: SymbolInformation,
+export function getCodeLens(
+  targetSymbols: SymbolInformation[],
   parentSymbol: SymbolInformation,
   symbolsOfParent: SymbolInformation[],
   kind: SymbolKind
-): Promise<CodeLens | undefined> {
-  const basePropertyMethod = symbolsOfParent.filter(
-    s =>
-      s.name === propertyMethodSymbol.name &&
-      s.containerName === parentSymbol.name &&
-      s.containerName !== propertyMethodSymbol.containerName
-  );
-
-  if (basePropertyMethod.length === 1) {
+): CodeLens[] {
+  let codelens: CodeLens[] = [];
+  targetSymbols.forEach(targetSymbol => {
+    const basePropertyMethod = symbolsOfParent.filter(
+      symbolInParentUri =>
+        symbolInParentUri.name === targetSymbol.name &&
+        symbolInParentUri.containerName === parentSymbol.name &&
+        symbolInParentUri.containerName !== targetSymbol.containerName
+    );
+    if (basePropertyMethod.length !== 1) {
+      return;
+    }
     if (kind === SymbolKind.Class) {
-      return new CodeLens(propertyMethodSymbol.location.range, {
-        command: "classLens.gotoParent",
-        title: `override`,
-        arguments: [basePropertyMethod[0]]
-      });
+      codelens.push(
+        new CodeLens(targetSymbol.location.range, {
+          command: "classLens.gotoParent",
+          title: `override`,
+          arguments: [basePropertyMethod[0]]
+        })
+      );
+    } else if (kind === SymbolKind.Interface) {
+      codelens.push(
+        new CodeLens(targetSymbol.location.range, {
+          command: "classLens.gotoParent",
+          title: `implements: ${parentSymbol.name}`,
+          arguments: [basePropertyMethod[0]]
+        })
+      );
     }
-    if (kind === SymbolKind.Interface) {
-      return new CodeLens(propertyMethodSymbol.location.range, {
-        command: "classLens.gotoParent",
-        title: `implements: ${parentSymbol.name}`,
-        arguments: [basePropertyMethod[0]]
-      });
-    }
-  }
+  });
+  return codelens;
 }
 
-export async function getCodeLensForMember(
-  propertyMethodSymbol: SymbolInformation,
+/**
+ *
+ * @param targetSymbols Symbols to look for codelens for
+ * @param parentSymbol Parent symbol
+ * @param currentUri current document uri
+ * @param kind SymbolKind.Class or SymbolKind.Interface
+ * @param symbolsInCurrentUri All symbols of current document
+ */
+export async function getCodeLensForParents(
   parentSymbol: SymbolInformation,
-  uri: Uri,
+  currentUri: Uri,
   kind: SymbolKind,
-  symbolsCurrent: SymbolInformation[]
-): Promise<CodeLens | undefined> {
+  symbolsInCurrentUri: SymbolInformation[],
+  containerName: string
+): Promise<CodeLens[]> {
   try {
-     // check if the parent class/interface is in the current file.
-     let symbols = symbolsCurrent.filter(
+    // get a list of target symbols to get codelens for.
+    const targetSymbols = symbolsInCurrentUri.filter(
+      symbol =>
+        (symbol.kind === SymbolKind.Property ||
+          symbol.kind === SymbolKind.Method) &&
+        symbol.containerName === containerName
+    );
+    // check if the parent class/interface is in the current file.
+    let parentSymbolsInCurrentUri = symbolsInCurrentUri.filter(
       s => s.containerName === parentSymbol.name
     );
-    if (symbols.length > 0) {
-      return await getCodeLens(
-        propertyMethodSymbol,
+    if (parentSymbolsInCurrentUri.length > 0) {
+      return getCodeLens(
+        targetSymbols,
         parentSymbol,
-        symbols,
+        parentSymbolsInCurrentUri,
         kind
       );
     }
@@ -69,20 +91,20 @@ export async function getCodeLensForMember(
      * Check if the cache has symbols of the parent class/interface file.
      * if true, generate codelens for the given property/method.
      */
-    const currentFileName = parentSymbol.location.uri.fsPath;
+    const currentFileName = currentUri.fsPath;
     const cache = CacheProvider.symbolCache.filter(
       c =>
         c.currentFileName.indexOf(currentFileName) !== -1 &&
         c.parentSymbolName === parentSymbol.name
     );
     if (cache.length > 0 && cache[0].parentSymbols.length > 0) {
-      return await getCodeLens(
-        propertyMethodSymbol,
+      return getCodeLens(
+        targetSymbols,
         parentSymbol,
         cache[0].parentSymbols,
         kind
       );
-    } else { 
+    } else {
       /**
        * if we are here, then the parent symbol is not in the current file.
        * 1. excuete definition provider to look for the parent file.
@@ -93,27 +115,31 @@ export async function getCodeLensForMember(
        * 5. generate codelens for the given child symbol against the above parent symbols.
        */
       const location = await getDefinitionLocation(
-        uri,
+        currentUri,
         parentSymbol.location.range.start
       );
 
-      // check if the parent class/interface's symbols are already in cache.
-
+      // check if the parent class/interface's symbols are already in cache,
+      // maybe loaded by other files before.
       const cache = CacheProvider.symbolCache.filter(
         c => c.parentFileName === location.uri.fsPath
       );
+      // if found, then check if the cache already added
+      // current file name, if not, add the current file name.
       if (cache.length === 1) {
-        if(cache[0].currentFileName.indexOf(currentFileName)=== -1){
+        if (cache[0].currentFileName.indexOf(currentFileName) === -1) {
           cache[0].currentFileName.push(currentFileName);
         }
-        return await getCodeLens(
-          propertyMethodSymbol,
+        return getCodeLens(
+          targetSymbols,
           parentSymbol,
           cache[0].parentSymbols,
           kind
         );
       }
+      // if we are here, then it is the first time we get symbols from parent uri.
       const symbolsRemote = await getSymbolsByUri(location.uri);
+      // save to cache if cache doesnt have parent symbols.
       if (
         CacheProvider.symbolCache.filter(
           s =>
@@ -121,21 +147,14 @@ export async function getCodeLensForMember(
             s.parentFileName === location.uri.fsPath
         ).length === 0
       ) {
-        CacheProvider.symbolCache.push(
-          {
-            currentFileName: [currentFileName],
-            parentSymbolName: parentSymbol.name,
-            parentFileName: location.uri.fsPath,
-            parentSymbols: symbolsRemote
-          }
-        );
+        CacheProvider.symbolCache.push({
+          currentFileName: [currentFileName],
+          parentSymbolName: parentSymbol.name,
+          parentFileName: location.uri.fsPath,
+          parentSymbols: symbolsRemote
+        });
       }
-      return await getCodeLens(
-        propertyMethodSymbol,
-        parentSymbol,
-        symbolsRemote,
-        kind
-      );
+      return getCodeLens(targetSymbols, parentSymbol, symbolsRemote, kind);
     }
   } catch (error) {
     throw error;

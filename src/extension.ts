@@ -1,11 +1,10 @@
 "use strict";
 
-import { workspace, ExtensionContext, commands, languages } from "vscode";
-import { BaseClassProvider, InterfaceCodeLensProvider } from "./providers";
-import { CacheProvider } from "./utils";
+import { ExtensionContext, commands, languages, workspace } from "vscode";
 import { gotoParent, gotoParentCommandName } from "./commands";
-import { updateConfig } from "./configuration";
-import { supportedDocument } from "./configuration";
+import { supportedDocument, updateConfig } from "./configuration";
+import { ClassLensProvider } from "./providers";
+import { CacheProvider } from "./utils";
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -18,11 +17,7 @@ export function activate(context: ExtensionContext) {
     commands.registerCommand(gotoParentCommandName, gotoParent),
     languages.registerCodeLensProvider(
       supportedDocument,
-      new BaseClassProvider()
-    ),
-    languages.registerCodeLensProvider(
-      supportedDocument,
-      new InterfaceCodeLensProvider()
+      new ClassLensProvider()
     ),
     workspace.onDidChangeConfiguration(updateConfig),
     workspace.onDidSaveTextDocument(doc => {

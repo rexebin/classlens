@@ -4,21 +4,24 @@ import {
   CancellationToken,
   CodeLens,
   CodeLensProvider,
+  SymbolInformation,
   SymbolKind,
   TextDocument
 } from "vscode";
 import {
-  excutePromises,
   getBaseClassSymbol,
-  getCodeLensForMember,
   getSymbolsOpenedUri,
-  hasBaseClass
+  hasBaseClass,
+  getCodeLensForParents,
+  excutePromises,
+  getInterfaceSymbols,
+  hasInterfaces
 } from "../utils";
 
 /**
  * Codelens Provider for Base class.
  */
-export class BaseClassProvider implements CodeLensProvider {
+export class ClassLensProvider implements CodeLensProvider {
   provideCodeLenses(
     document: TextDocument,
     token: CancellationToken
@@ -27,62 +30,89 @@ export class BaseClassProvider implements CodeLensProvider {
      * if there is no base class in the whole file, skip.
      */
     const text = document.getText();
-    if (!hasBaseClass(text)) {
+    if (!hasBaseClass(text) && !hasInterfaces(text)) {
       return [];
     }
     /**
      * if there is a base class in the file, then continue.
      */
-    return this.provideBaseClassCodelens(document);
+    return this.provideClassCodelens(document);
   }
 
   /**
    * Fetch symbols and generate Codelens.
    * @param document current document
    */
-  async provideBaseClassCodelens(document: TextDocument): Promise<CodeLens[]> {
+  async provideClassCodelens(document: TextDocument): Promise<CodeLens[]> {
     try {
       const symbols = await getSymbolsOpenedUri(document.uri);
       // if there is no symbols in the current document, return;
       if (symbols.length === 0) {
         throw new Error("No Symbols found");
       }
-      let promises: Promise<CodeLens | undefined>[] = [];
 
-      /**
-       * 1. filter out all symbols except properties and methods.
-       * 2. filter out any symbols without a container class and return symbols and associated base class symbol
-       * 3. call for Codelens generator for each symbols left, push all the promises into a promise array.
-       * 4. resolve all promises and return a codelens array promise.
-       */
-      symbols
-        .filter(
-          symbol =>
-            symbol.kind === SymbolKind.Property ||
-            symbol.kind === SymbolKind.Method
-        )
-        .forEach(symbol => {
-          const className = symbol.containerName;
-          const classSymbol = symbols.filter(s => s.name === className)[0];
-          const baseClassSymbol = getBaseClassSymbol(
-            document,
-            classSymbol,
-            symbols
-          );
-          if (!baseClassSymbol) {
-            return;
-          }
+      let baseClassSymbols: {
+        baseClassSymbol: SymbolInformation;
+        className: string;
+      }[] = [];
+
+      let classes = symbols
+        .filter(s => s.containerName !== "")
+        .map(s => s.containerName);
+      classes = Array.from(new Set(classes));
+
+      classes.forEach(c => {
+        const classSymbol = symbols.filter(s => s.name === c)[0];
+        const baseClassSymbol = getBaseClassSymbol(
+          document,
+          classSymbol,
+          symbols
+        );
+        if (!baseClassSymbol) {
+          return;
+        }
+        baseClassSymbols.push({
+          baseClassSymbol: baseClassSymbol,
+          className: c
+        });
+      });
+
+      let promises: Promise<CodeLens[]>[] = [];
+      baseClassSymbols.forEach(baseClassSymbol => {
+        promises.push(
+          getCodeLensForParents(
+            baseClassSymbol.baseClassSymbol,
+            document.uri,
+            SymbolKind.Class,
+            symbols,
+            baseClassSymbol.className
+          )
+        );
+      });
+      let interfaceSymbols: {
+        interfaceSymbols: SymbolInformation[];
+        className: string;
+      }[] = [];
+      classes.forEach(c => {
+        const classSymbol = symbols.filter(s => s.name === c)[0];
+        interfaceSymbols.push({
+          interfaceSymbols: getInterfaceSymbols(document, classSymbol, symbols),
+          className: c
+        });
+      });
+      interfaceSymbols.forEach(interfaceSymbol => {
+        interfaceSymbol.interfaceSymbols.forEach(i => {
           promises.push(
-            getCodeLensForMember(
-              symbol,
-              baseClassSymbol,
+            getCodeLensForParents(
+              i,
               document.uri,
-              SymbolKind.Class,
-              symbols
+              SymbolKind.Interface,
+              symbols,
+              interfaceSymbol.className
             )
           );
         });
-
+      });
       return excutePromises(promises);
     } catch (error) {
       throw error;

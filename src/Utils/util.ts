@@ -35,10 +35,10 @@ export function hasInterfaces(document: string): boolean {
  * @param promises list of promises to solve.
  */
 export function excutePromises(
-  promises: Promise<CodeLens | undefined>[]
+  promises: Promise<CodeLens[]>[]
 ): Promise<CodeLens[]> {
   return new Promise((resolve, reject) => {
-    const results: CodeLens[] = [];
+    let results: CodeLens[] = [];
     let count = 0;
     promises.forEach((promise, idx) => {
       promise
@@ -48,7 +48,7 @@ export function excutePromises(
         })
         .then(valueOrError => {
           if (!(valueOrError instanceof Error) && valueOrError !== undefined) {
-            results.push(valueOrError);
+            results = [...results, ...valueOrError];
           }
           count += 1;
           if (count === promises.length) {
