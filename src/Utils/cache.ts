@@ -8,10 +8,3 @@ export interface SymbolCache {
   parentUriFspath: string;
   parentSymbols: SymbolInformation[];
 }
-
-/**
- * Cache storage. Cache symbols of parents, relevent to current file.
- */
-export class CacheProvider {
-  static symbolCache: SymbolCache[] = [];
-}

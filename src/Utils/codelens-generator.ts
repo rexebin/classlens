@@ -1,7 +1,7 @@
 "use strict";
 
 import { CodeLens, SymbolInformation, SymbolKind, Uri } from "vscode";
-import { CacheProvider } from "./cache";
+import { classLensCache, saveCache } from "../extension";
 import { getDefinitionLocation } from "./definition.command";
 import { getSymbolsByUri } from "./symbols";
 /**
@@ -93,7 +93,7 @@ export async function getCodeLensForParents(
      * if true, generate codelens for the given property/method.
      */
     const currentFileName = currentUri.fsPath;
-    let cache = CacheProvider.symbolCache.find(
+    let cache = classLensCache.find(
       c =>
         c.currentFileName.indexOf(currentFileName) !== -1 &&
         c.parentSymbolName.indexOf(parentSymbol.name) !== -1
@@ -115,9 +115,8 @@ export async function getCodeLensForParents(
 
     // check if the parent class/interface's symbols are already in cache,
     // maybe loaded by other files before.
-    cache = CacheProvider.symbolCache.find(
-      c => c.parentUriFspath === location.uri.fsPath
-    );
+    cache = classLensCache.find(c => c.parentUriFspath === location.uri.fsPath);
+
     // if found, then check if the cache already added
     // current file name, if not, add the current file name and parent symbol name.
     if (cache) {
@@ -127,6 +126,7 @@ export async function getCodeLensForParents(
       if (cache.parentSymbolName.indexOf(parentSymbol.name) === -1) {
         cache.parentSymbolName.push(parentSymbol.name);
       }
+      saveCache();
       return getCodeLens(
         targetSymbols,
         parentSymbol,
@@ -137,17 +137,14 @@ export async function getCodeLensForParents(
     // if we are here, then it is the first time we get symbols from parent uri.
     const symbolsRemote = await getSymbolsByUri(location.uri);
     // save to cache if cache doesnt have parent symbols.
-    if (
-      !CacheProvider.symbolCache.find(
-        s => s.parentUriFspath === location.uri.fsPath
-      )
-    ) {
-      CacheProvider.symbolCache.push({
+    if (!classLensCache.find(s => s.parentUriFspath === location.uri.fsPath)) {
+      classLensCache.push({
         currentFileName: [currentFileName],
         parentSymbolName: [parentSymbol.name],
         parentUriFspath: location.uri.fsPath,
         parentSymbols: symbolsRemote
       });
+      saveCache();
     }
     return getCodeLens(targetSymbols, parentSymbol, symbolsRemote, kind);
   } catch (error) {

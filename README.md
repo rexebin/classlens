@@ -17,6 +17,14 @@ ClassLens also allows you to quickly navigate to the parent member by clicking o
 
 Important: ClassLens is a TypeScript and JavaScript Codelens extension, it requires CodeLens to be enabled to be triggered.
 
+# Cache
+
+Classlens saves cache to workspace to increase performance and minimise resource cost.
+
+To clean workspace cache:
+
+CTRL/CMD + P: then search for "Classlens: Clean Cache".
+
 # Links
 
 [Github Repository](https://github.com/rexebin/classlens)
