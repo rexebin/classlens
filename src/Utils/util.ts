@@ -1,6 +1,7 @@
 "use strict";
 
-import { CodeLens } from "vscode";
+import { CodeLens, SymbolInformation } from "vscode";
+import { CachedSymbol } from "../models";
 const baseClassRegex = /(class)(\s+)(\w+)(<\w+>)?(\s+)(extends)/;
 const interfaceRegex = /(implements)(\s+)/;
 
@@ -57,4 +58,22 @@ export function excutePromises(
         });
     });
   });
+}
+
+export function convertToCachedSymbols(
+  symbols: SymbolInformation[]
+): CachedSymbol[] {
+  const cachedSymbols: CachedSymbol[] = [];
+  symbols.forEach(symbol => {
+    cachedSymbols.push(
+      new CachedSymbol(
+        symbol.location.uri.fsPath,
+        symbol.location.range.start.line,
+        symbol.location.range.start.character,
+        symbol.name,
+        symbol.containerName
+      )
+    );
+  });
+  return cachedSymbols;
 }

@@ -9,11 +9,11 @@ import {
 } from "vscode";
 import { gotoParent, gotoParentCommandName } from "./commands";
 import { supportedDocument, updateConfig } from "./configuration";
+import { ClassLensCache } from "./models";
 import { ClassLensProvider } from "./providers";
-import { SymbolCache } from "./utils";
 
 export let workspaceState: Memento;
-export let classLensCache: SymbolCache[];
+export let classLensCache: ClassLensCache[];
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: ExtensionContext) {
@@ -21,7 +21,7 @@ export function activate(context: ExtensionContext) {
   // Now provide the implementation of the command with  registerCommand
   // The commandId parameter must match the command field in package.json
   workspaceState = context.workspaceState;
-  classLensCache = workspaceState.get<SymbolCache[]>("classlens", []);
+  classLensCache = workspaceState.get<ClassLensCache[]>("classlens", []);
   context.subscriptions.push(
     commands.registerCommand(gotoParentCommandName, gotoParent),
     commands.registerCommand("classlens.cleanCache", () => {

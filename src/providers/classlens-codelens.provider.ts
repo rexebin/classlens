@@ -4,10 +4,10 @@ import {
   CancellationToken,
   CodeLens,
   CodeLensProvider,
-  SymbolInformation,
   SymbolKind,
   TextDocument
 } from "vscode";
+import { ClassParents } from "../models";
 import {
   excutePromises,
   getBaseClassSymbol,
@@ -48,7 +48,7 @@ export class ClassLensProvider implements CodeLensProvider {
       const symbols = await getSymbolsOpenedUri(document.uri);
       // if there is no symbols in the current document, return;
       if (symbols.length === 0) {
-        throw new Error("No Symbols found");
+        return [];
       }
       let promises: Promise<CodeLens[]>[] = [];
 
@@ -111,13 +111,4 @@ export class ClassLensProvider implements CodeLensProvider {
       throw error;
     }
   }
-}
-
-export interface ClassParents {
-  [className: string]: ParentSymbols;
-}
-
-export interface ParentSymbols {
-  baseClass: SymbolInformation | undefined;
-  interfaces: SymbolInformation[];
 }

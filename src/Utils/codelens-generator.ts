@@ -1,7 +1,9 @@
 "use strict";
 
 import { CodeLens, SymbolInformation, SymbolKind, Uri } from "vscode";
+import { convertToCachedSymbols } from ".";
 import { classLensCache, saveCache } from "../extension";
+import { CachedSymbol } from "../models";
 import { getDefinitionLocation } from "./definition.command";
 import { getSymbolsByUri } from "./symbols";
 /**
@@ -17,7 +19,7 @@ import { getSymbolsByUri } from "./symbols";
 export function getCodeLens(
   targetSymbols: SymbolInformation[],
   parentSymbol: SymbolInformation,
-  symbolsOfParent: SymbolInformation[],
+  symbolsOfParent: CachedSymbol[],
   kind: SymbolKind
 ): CodeLens[] {
   let codelens: CodeLens[] = [];
@@ -84,7 +86,7 @@ export async function getCodeLensForParents(
       return getCodeLens(
         targetSymbols,
         parentSymbol,
-        parentSymbolsInCurrentUri,
+        convertToCachedSymbols(parentSymbolsInCurrentUri),
         kind
       );
     }
@@ -142,11 +144,16 @@ export async function getCodeLensForParents(
         currentFileName: [currentFileName],
         parentSymbolName: [parentSymbol.name],
         parentUriFspath: location.uri.fsPath,
-        parentSymbols: symbolsRemote
+        parentSymbols: convertToCachedSymbols(symbolsRemote)
       });
       saveCache();
     }
-    return getCodeLens(targetSymbols, parentSymbol, symbolsRemote, kind);
+    return getCodeLens(
+      targetSymbols,
+      parentSymbol,
+      convertToCachedSymbols(symbolsRemote),
+      kind
+    );
   } catch (error) {
     throw error;
   }

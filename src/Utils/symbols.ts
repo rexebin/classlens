@@ -1,11 +1,11 @@
 "use strict";
 
 import {
-  Uri,
   SymbolInformation,
-  workspace,
+  TextDocument,
+  Uri,
   commands,
-  TextDocument
+  workspace
 } from "vscode";
 
 /**
@@ -36,14 +36,14 @@ export async function getSymbolsOpenedUri(
   uri: Uri
 ): Promise<SymbolInformation[]> {
   try {
-    const location = await commands.executeCommand<SymbolInformation[]>(
+    const symbols = await commands.executeCommand<SymbolInformation[]>(
       "vscode.executeDocumentSymbolProvider",
       uri
     );
-    if (!location) {
-      throw new Error("No Symbols found");
+    if (!symbols) {
+      return [];
     }
-    return location;
+    return symbols;
   } catch (error) {
     throw error;
   }
