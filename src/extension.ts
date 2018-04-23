@@ -22,7 +22,7 @@ export function activate(context: ExtensionContext) {
     workspace.onDidChangeConfiguration(updateConfig),
     workspace.onDidSaveTextDocument(doc => {
       const cache = CacheProvider.symbolCache.filter(
-        s => s.parentFileName === doc.fileName
+        s => s.parentUriFspath === doc.fileName
       );
       if (cache) {
         cache.forEach(c => {

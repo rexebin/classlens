@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.3.0
+
+Rewrite Definition and Symbols lookup, performance should increase considerably.
+
 ## 0.2.2
 
 Optimise cache and increase performance.
