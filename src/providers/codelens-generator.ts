@@ -1,11 +1,11 @@
 "use strict";
 
 import { CodeLens, SymbolInformation, SymbolKind, Uri } from "vscode";
-import { convertToCachedSymbols } from ".";
 import { classLensCache, saveCache } from "../extension";
 import { CachedSymbol } from "../models";
 import { getDefinitionLocation } from "./definition.command";
 import { getSymbolsByUri } from "./symbols";
+import { convertToCachedSymbols } from "./util";
 /**
  * Return Codelens for a given property/method symbol.
  *

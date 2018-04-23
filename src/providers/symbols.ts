@@ -7,7 +7,7 @@ import {
   commands,
   workspace
 } from "vscode";
-import { hasBaseClass } from ".";
+import { hasBaseClass } from "./util";
 
 /**
  *

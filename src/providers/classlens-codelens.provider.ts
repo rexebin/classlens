@@ -8,15 +8,13 @@ import {
   TextDocument
 } from "vscode";
 import { ClassParents } from "../models";
+import { getCodeLensForParents } from "./codelens-generator";
 import {
-  excutePromises,
   getBaseClassSymbol,
-  getCodeLensForParents,
   getInterfaceSymbols,
-  getSymbolsOpenedUri,
-  hasBaseClass,
-  hasInterfaces
-} from "../utils";
+  getSymbolsOpenedUri
+} from "./symbols";
+import { excutePromises, hasBaseClass, hasInterfaces } from "./util";
 
 /**
  * Codelens Provider for Base class.
