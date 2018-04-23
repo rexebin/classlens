@@ -7,6 +7,7 @@ import {
   commands,
   workspace
 } from "vscode";
+import { hasBaseClass } from ".";
 
 /**
  *
@@ -109,6 +110,9 @@ export function getBaseClassSymbol(
   classSymbol: SymbolInformation,
   symbols: SymbolInformation[]
 ): SymbolInformation | undefined {
+  if (!hasBaseClass(doc.getText(classSymbol.location.range))) {
+    return;
+  }
   let parentsAndInterfaces = getClassTextFromClassName(doc, classSymbol);
   if (parentsAndInterfaces === "") {
     return;
