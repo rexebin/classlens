@@ -1,5 +1,13 @@
 # Change Log
 
+## 0.4.0
+
+Now save and load cache for each project, so that cache is not required to rebuild each time vscode is restarted.
+
+## 0.3.0
+
+Rewrite Definition and Symbols lookup, performance should increase considerably.
+
 ## 0.2.2
 
 Optimise cache and increase performance.

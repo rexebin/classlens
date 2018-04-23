@@ -3,7 +3,7 @@
   "displayName": "ClassLens",
   "description":
     "Class lens showing relationships with its interfaces and parent class.",
-  "version": "0.2.2",
+  "version": "0.4.1",
   "publisher": "rexebin",
   "engines": {
     "vscode": "^1.22.0"
@@ -13,7 +13,7 @@
     "url": "https://github.com/rexebin/classlens"
   },
   "categories": ["Languages", "Other"],
-  "activationEvents": ["onLanguage:typescript", "onLanguage:javascript"],
+  "activationEvents": ["*"],
   "contributes": {
     "configuration": {
       "title": "Side by side",
@@ -24,6 +24,10 @@
           "description": "Open files side by side to the Typescript file."
         }
       }
+    },
+    "commands": {
+      "command": "classlens.cleanCache",
+      "title": "ClassLens: Clean Cache"
     }
   },
   "keywords": [
