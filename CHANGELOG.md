@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.4.3
+
+Fix: navigation - broken in 0.4.0 due to vscode's cache serialisation.
+Fix: now correctly work with "extends" in generic signature.
+Improve: now save only necessary information to cache.
+
 ## 0.4.0
 
 Now save and load cache for each project, so that cache is not required to rebuild each time vscode is restarted.

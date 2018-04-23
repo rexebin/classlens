@@ -23,7 +23,7 @@ ClassLens is a TypeScript and JavaScript Codelens extension, it requires CodeLen
 
 When it comes to CodeLens extension, performance is a key issue because they influence each other.
 
-Classlens builds up an database like cache as you develop your project. Therefore it will cost you hardly anything after it has seen all of your class structures.
+Classlens builds up a database alike cache as you develop your project. Therefore it will cost you hardly anything after it has seen all of your class structures.
 
 Caches will be saved to workspace state and each time you open vscode, Classlens will recover the cache from workspace state.
 
