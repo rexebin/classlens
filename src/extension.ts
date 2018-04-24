@@ -7,13 +7,13 @@ import {
   languages,
   workspace
 } from "vscode";
-import { gotoParent, gotoParentCommandName } from "./commands";
 import { supportedDocument, updateConfig } from "./configuration";
-import { ClassLensCache } from "./models";
-import { ClassLensProvider } from "./providers";
+import { excute } from "./decoration";
+import { ClassIOCache } from "./models";
+import { ClassIODefinitionProvider } from "./provider";
 
 export let workspaceState: Memento;
-export let classLensCache: ClassLensCache[];
+export let classIOCache: ClassIOCache[];
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: ExtensionContext) {
@@ -21,26 +21,32 @@ export function activate(context: ExtensionContext) {
   // Now provide the implementation of the command with  registerCommand
   // The commandId parameter must match the command field in package.json
   workspaceState = context.workspaceState;
-  classLensCache = workspaceState.get<ClassLensCache[]>("classlens", []);
+  classIOCache = workspaceState.get<ClassIOCache[]>("classio", []);
   context.subscriptions.push(
-    commands.registerCommand(gotoParentCommandName, gotoParent),
-    commands.registerCommand("classlens.cleanCache", () => {
-      classLensCache = [];
+    commands.registerCommand("classio.cleanCache", () => {
+      classIOCache = [];
       saveCache();
     }),
-    languages.registerCodeLensProvider(
+    workspace.onDidOpenTextDocument(activeEditor => {
+      excute();
+    }),
+    workspace.onDidChangeTextDocument(event => {
+      excute();
+    }),
+    languages.registerDefinitionProvider(
       supportedDocument,
-      new ClassLensProvider()
+      new ClassIODefinitionProvider()
     ),
+
     workspace.onDidChangeConfiguration(updateConfig),
     workspace.onDidSaveTextDocument(doc => {
-      const cache = classLensCache.filter(
+      const cache = classIOCache.filter(
         s => s.parentUriFspath === doc.fileName
       );
       if (cache.length > 0) {
         cache.forEach(c => {
-          const index = classLensCache.indexOf(c);
-          classLensCache.splice(index, 1);
+          const index = classIOCache.indexOf(c);
+          classIOCache.splice(index, 1);
         });
         saveCache();
       }
@@ -52,5 +58,5 @@ export function activate(context: ExtensionContext) {
 export function deactivate() {}
 
 export function saveCache() {
-  workspaceState.update("classlens", classLensCache);
+  workspaceState.update("classio", classIOCache);
 }

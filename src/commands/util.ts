@@ -1,7 +1,7 @@
 "use strict";
 
-import { CodeLens, SymbolInformation } from "vscode";
-import { CachedSymbol } from "../models";
+import { SymbolInformation } from "vscode";
+import { CachedSymbol, DecorationOptionsForParents } from "../models";
 const baseClassRegex = /(class)(\s+)(\w+)(<\w+>)?(\s+)(extends)/;
 const interfaceRegex = /(implements)(\s+)/;
 
@@ -36,10 +36,13 @@ export function hasInterfaces(document: string): boolean {
  * @param promises list of promises to solve.
  */
 export function excutePromises(
-  promises: Promise<CodeLens[]>[]
-): Promise<CodeLens[]> {
+  promises: Promise<DecorationOptionsForParents>[]
+): Promise<DecorationOptionsForParents> {
   return new Promise((resolve, reject) => {
-    let results: CodeLens[] = [];
+    let results: DecorationOptionsForParents = {
+      class: [],
+      interface: []
+    };
     let count = 0;
     promises.forEach((promise, idx) => {
       promise
@@ -49,7 +52,7 @@ export function excutePromises(
         })
         .then(valueOrError => {
           if (!(valueOrError instanceof Error) && valueOrError !== undefined) {
-            results = [...results, ...valueOrError];
+            results = mergeDecorations([results, valueOrError]);
           }
           count += 1;
           if (count === promises.length) {
@@ -76,4 +79,21 @@ export function convertToCachedSymbols(
     );
   });
   return cachedSymbols;
+}
+
+export function mergeDecorations(
+  decorations: DecorationOptionsForParents[]
+): DecorationOptionsForParents {
+  const result: DecorationOptionsForParents = {
+    class: [],
+    interface: []
+  };
+  decorations.forEach(decoration => {
+    Object.keys(decoration).forEach(key => {
+      if (decoration[key]) {
+        result[key] = [...result[key], ...decoration[key]];
+      }
+    });
+  });
+  return result;
 }

@@ -1,9 +1,9 @@
 {
-  "name": "classlens",
-  "displayName": "ClassLens",
+  "name": "classio",
+  "displayName": "Class IO",
   "description":
-    "Class lens showing relationships with its interfaces and parent class.",
-  "version": "0.4.3",
+    "Class IO is an alternative to ClassLens, it shows relationships with its interfaces and parent class in a non-obstructive way.",
+  "version": "0.1.0",
   "publisher": "rexebin",
   "engines": {
     "vscode": "^1.22.0"
@@ -16,19 +16,38 @@
   "activationEvents": ["*"],
   "contributes": {
     "configuration": {
-      "title": "Side by side",
+      "title": "ClassIO",
       "properties": {
-        "classLens.openSideBySide": {
-          "type": "boolean",
-          "default": true,
-          "description": "Open files side by side to the Typescript file."
+        "classio.overrideSymbol": {
+          "type": "string",
+          "default": "o ",
+          "description":
+            "The symbol will be attached to before override member."
+        },
+        "classio.overrideSymbolColor": {
+          "type": "string",
+          "default": "rgba(128,128,128,1)",
+          "description": "The color of attached override symbol."
+        },
+        "classio.implmentationSymbol": {
+          "type": "string",
+          "default": "i ",
+          "description":
+            "The symbol will be attached to before interface implementation members."
+        },
+        "classio.implmentationSymbolColor": {
+          "type": "string",
+          "default": "rgba(128,128,128,1)",
+          "description": "The color of attached implmentation symbol."
         }
       }
     },
-    "commands": {
-      "command": "classlens.cleanCache",
-      "title": "ClassLens: Clean Cache"
-    }
+    "commands": [
+      {
+        "command": "classio.cleanCache",
+        "title": "Classio: Clean Cache"
+      }
+    ]
   },
   "keywords": [
     "codelens",

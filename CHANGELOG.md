@@ -1,36 +1,5 @@
 # Change Log
 
-## 0.4.3
-
-Fix: navigation - broken in 0.4.0 due to vscode's cache serialisation.
-Fix: now correctly work with "extends" in generic signature.
-Improve: now save only necessary information to cache.
-
-## 0.4.0
-
-Now save and load cache for each project, so that cache is not required to rebuild each time vscode is restarted.
-
-## 0.3.0
-
-Rewrite Definition and Symbols lookup, performance should increase considerably.
-
-## 0.2.2
-
-Optimise cache and increase performance.
-
-## 0.2.1
-
-Fix: class with generic signature now work as intended.
-
-## 0.2.0
-
-Optimise cache and performance increased
-
-## 0.1.0
-
-* Add Javascript support
-* fix bug: child and parent class in the same file now should work.
-
 ## 0.0.1
 
 * Initial release

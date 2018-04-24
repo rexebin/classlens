@@ -140,7 +140,7 @@ export function getBaseClassSymbol(
  * get class's declaration text.
  * Note: it is only contains the given class's body, not the whole body.
  * when class is changed by the user, only the first part to the changing point of the class body will be returned.
- * Therefore, changing class may interrupt classlens until class text returned contains the sholw declaration of the class.
+ * Therefore, changing class may interrupt classIO until class text returned contains the sholw declaration of the class.
  * @param doc : current text document
  * @param classSymbol symbol of target class to look for.
  *

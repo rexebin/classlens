@@ -1,6 +1,6 @@
 "use strict";
 
-export interface ClassLensCache {
+export interface ClassIOCache {
   currentFileName: string[];
   parentSymbolName: string[];
   parentUriFspath: string;
