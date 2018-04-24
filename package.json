@@ -65,14 +65,7 @@
       "key": "shift+alt+g"
     }
   },
-  "keywords": [
-    "codelens",
-    "typescript",
-    "class",
-    "interface",
-    "hierarchy",
-    "inheritance"
-  ],
+  "keywords": ["typescript", "class", "interface", "hierarchy", "inheritance"],
   "main": "./out/extension",
   "scripts": {
     "vscode:prepublish": "npm run compile",
