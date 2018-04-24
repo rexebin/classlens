@@ -43,6 +43,6 @@ Change the markup symbols and color with the following configuration:
 
 # Links
 
-[Github Repository](https://github.com/rexebin/classlens)
+[Github Repository](https://github.com/rexebin/classlens/tree/colorandshortcut)
 
-[Install ClassLens from VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=rexebin.classlens)
+[Install ClassLens from VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=rexebin.classio)
