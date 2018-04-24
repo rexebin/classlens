@@ -7,13 +7,12 @@ import {
   languages,
   workspace
 } from "vscode";
-import { supportedDocument, updateConfig } from "./configuration";
+import { supportedDocument, updateConfig, Config } from "./configuration";
 import { excute } from "./decoration";
 import { ClassIOCache } from "./models";
 import { ClassIODefinitionProvider } from "./provider";
 
-export let workspaceState: Memento;
-export let classIOCache: ClassIOCache[];
+let workspaceState: Memento;
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: ExtensionContext) {
@@ -21,17 +20,20 @@ export function activate(context: ExtensionContext) {
   // Now provide the implementation of the command with  registerCommand
   // The commandId parameter must match the command field in package.json
   workspaceState = context.workspaceState;
-  classIOCache = workspaceState.get<ClassIOCache[]>("classio", []);
+  Config.classIOCache = workspaceState.get<ClassIOCache[]>("classio", []);
   context.subscriptions.push(
     commands.registerCommand("classio.cleanCache", () => {
-      classIOCache = [];
+      Config.classIOCache = [];
       saveCache();
     }),
     workspace.onDidOpenTextDocument(activeEditor => {
       excute();
     }),
     workspace.onDidChangeTextDocument(event => {
-      excute();
+      if (Config.timer) {
+        clearTimeout(Config.timer);
+      }
+      Config.timer = setTimeout(excute, 500);
     }),
     languages.registerDefinitionProvider(
       supportedDocument,
@@ -40,13 +42,13 @@ export function activate(context: ExtensionContext) {
 
     workspace.onDidChangeConfiguration(updateConfig),
     workspace.onDidSaveTextDocument(doc => {
-      const cache = classIOCache.filter(
+      const cache = Config.classIOCache.filter(
         s => s.parentUriFspath === doc.fileName
       );
       if (cache.length > 0) {
         cache.forEach(c => {
-          const index = classIOCache.indexOf(c);
-          classIOCache.splice(index, 1);
+          const index = Config.classIOCache.indexOf(c);
+          Config.classIOCache.splice(index, 1);
         });
         saveCache();
       }
@@ -58,5 +60,5 @@ export function activate(context: ExtensionContext) {
 export function deactivate() {}
 
 export function saveCache() {
-  workspaceState.update("classio", classIOCache);
+  workspaceState.update("classio", Config.classIOCache);
 }

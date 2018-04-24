@@ -4,9 +4,10 @@ import {
   getDefinitionLocation,
   getSymbolsByUri
 } from "../commands";
-import { classIOCache, saveCache } from "../extension";
+import { saveCache } from "../extension";
 import { DecorationOptionsForParents } from "../models/decoration-options";
 import { generateDeorations } from "./generate-decorations";
+import { Config } from "../configuration";
 export async function getDecorationByParent(
   parentSymbol: SymbolInformation,
   currentUri: Uri,
@@ -28,13 +29,14 @@ export async function getDecorationByParent(
     );
     if (parentSymbolsInCurrentUri.length > 0) {
       if (
-        !classIOCache.find(
+        !Config.classIOCache.find(
           s => s.parentUriFspath === parentSymbol.location.uri.fsPath
         )
       ) {
-        classIOCache.push({
-          currentFileName: [parentSymbol.location.uri.fsPath],
-          parentSymbolName: [parentSymbol.name],
+        Config.classIOCache.push({
+          childFileNames: [parentSymbol.location.uri.fsPath],
+          parentNames: [parentSymbol.name],
+          childMemberNames: targetSymbols.map(s => s.name),
           parentUriFspath: parentSymbol.location.uri.fsPath,
           parentSymbols: convertToCachedSymbols(parentSymbolsInCurrentUri)
         });
@@ -52,10 +54,10 @@ export async function getDecorationByParent(
      * if true, generate codelens for the given property/method.
      */
     const currentFileName = currentUri.fsPath;
-    let cache = classIOCache.find(
+    let cache = Config.classIOCache.find(
       c =>
-        c.currentFileName.indexOf(currentFileName) !== -1 &&
-        c.parentSymbolName.indexOf(parentSymbol.name) !== -1
+        c.childFileNames.indexOf(currentFileName) !== -1 &&
+        c.parentNames.indexOf(parentSymbol.name) !== -1
     );
     if (cache && cache.parentSymbols.length > 0) {
       return generateDeorations(
@@ -75,16 +77,18 @@ export async function getDecorationByParent(
 
     // check if the parent class/interface's symbols are already in cache,
     // maybe loaded by other files before.
-    cache = classIOCache.find(c => c.parentUriFspath === location.uri.fsPath);
+    cache = Config.classIOCache.find(
+      c => c.parentUriFspath === location.uri.fsPath
+    );
 
     // if found, then check if the cache already added
     // current file name, if not, add the current file name and parent symbol name.
     if (cache) {
-      if (cache.currentFileName.indexOf(currentFileName) === -1) {
-        cache.currentFileName.push(currentFileName);
+      if (cache.childFileNames.indexOf(currentFileName) === -1) {
+        cache.childFileNames.push(currentFileName);
       }
-      if (cache.parentSymbolName.indexOf(parentSymbol.name) === -1) {
-        cache.parentSymbolName.push(parentSymbol.name);
+      if (cache.parentNames.indexOf(parentSymbol.name) === -1) {
+        cache.parentNames.push(parentSymbol.name);
       }
       saveCache();
       return generateDeorations(
@@ -97,10 +101,13 @@ export async function getDecorationByParent(
     // if we are here, then it is the first time we get symbols from parent uri.
     const symbolsRemote = await getSymbolsByUri(location.uri);
     // save to cache if cache doesnt have parent symbols.
-    if (!classIOCache.find(s => s.parentUriFspath === location.uri.fsPath)) {
-      classIOCache.push({
-        currentFileName: [currentFileName],
-        parentSymbolName: [parentSymbol.name],
+    if (
+      !Config.classIOCache.find(s => s.parentUriFspath === location.uri.fsPath)
+    ) {
+      Config.classIOCache.push({
+        childFileNames: [currentFileName],
+        parentNames: [parentSymbol.name],
+        childMemberNames: targetSymbols.map(s => s.name),
         parentUriFspath: location.uri.fsPath,
         parentSymbols: convertToCachedSymbols(symbolsRemote)
       });

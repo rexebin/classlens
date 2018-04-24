@@ -1,13 +1,13 @@
 import {
-  DefinitionProvider,
-  TextDocument,
-  Position,
   CancellationToken,
+  DefinitionProvider,
   Location,
-  window,
-  Uri
+  Position,
+  TextDocument,
+  Uri,
+  window
 } from "vscode";
-import { classIOCache } from "../extension";
+import { Config } from "../configuration";
 
 export class ClassIODefinitionProvider implements DefinitionProvider {
   provideDefinition(
@@ -26,9 +26,11 @@ export class ClassIODefinitionProvider implements DefinitionProvider {
     }
     const wordAtCursor = editor.document.getWordRangeAtPosition(position);
     const symbolName = editor.document.getText(wordAtCursor);
-
-    const cache = classIOCache.filter(
-      c => c.currentFileName.indexOf(document.fileName) !== -1
+    console.log(Config.classIOCache);
+    const cache = Config.classIOCache.filter(
+      c =>
+        c.childFileNames.indexOf(document.fileName) !== -1 &&
+        c.childMemberNames.indexOf(symbolName) !== -1
     );
     let locations: Location[] = [];
     cache.forEach(c => {

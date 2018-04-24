@@ -2,7 +2,9 @@
 
 ![ClassLens](./classlens.gif "Showcase")
 
-Class IO is an alternative extension to ClassLens, it shows relationships with its interfaces and parent class in a non-obstructive way. Class IO is not a CodeLens provider and therefore it does not require CodeLens to be enabled.
+Class IO is an alternative extension to ClassLens, it shows relationships with its interfaces and parent class in a non-obstructive way.
+
+Unlike ClassLens, Class IO is not a CodeLens provider and therefore it does not require CodeLens to be enabled.
 
 Class IO analyse document symbols on opening a Typescript/Javascript file and marks the following members in an class:
 

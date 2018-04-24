@@ -1,4 +1,5 @@
 import { workspace, window } from "vscode";
+import { ClassIOCache } from "../models";
 /**
  * Configuration storage class.
  */
@@ -30,6 +31,10 @@ export class Config {
       color: Config.implmentationSymbolColor
     }
   });
+
+  static classIOCache: ClassIOCache[] = [];
+
+  static timer: NodeJS.Timer;
 }
 /**
  * Will be called when vscode's configuration is changed, to refresh ClassIO config.

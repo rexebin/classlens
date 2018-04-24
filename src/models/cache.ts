@@ -1,8 +1,9 @@
 "use strict";
 
 export interface ClassIOCache {
-  currentFileName: string[];
-  parentSymbolName: string[];
+  childFileNames: string[];
+  childMemberNames: string[];
+  parentNames: string[];
   parentUriFspath: string;
   parentSymbols: CachedSymbol[];
 }
