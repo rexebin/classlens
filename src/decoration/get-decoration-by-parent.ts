@@ -80,6 +80,13 @@ export async function getDecorationByParent(
       parentSymbolInCurrentUri.location.range.start
     );
 
+    if (!location) {
+      return {
+        class: [],
+        interface: []
+      };
+    }
+
     // check if the parent class/interface's symbols are already in cache,
     // maybe loaded by other files before.
     cache = Config.classIOCache.find(

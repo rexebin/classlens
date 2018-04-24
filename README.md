@@ -1,6 +1,6 @@
 # Class IO
 
-![ClassLens](./classlens.gif "Showcase")
+![ClassIO](./classio.gif "Showcase")
 
 Class IO is an alternative extension to ClassLens, it shows relationships with its interfaces and parent class in a non-obstructive way.
 
@@ -11,7 +11,13 @@ Class IO analyse document symbols on opening a Typescript/Javascript file and ma
 1.  any class member that is an implemtations of the class's interfaces.
 2.  any class member that overides base class' member.
 
-Class IO also allows you to quickly navigate to the parent member by provde extra defintion to above marked members. To navigate to parent members, use Go To Definition and choose the parent member in the peak defintion popup.
+![ClassIO](./classio-screen.png)
+
+There are two way to quickly navigate to parent:
+
+1.  **Go To Definition**: Class IO also allows you to quickly navigate to the parent member by provde extra defintion to above marked members. To navigate to parent members, use Go To Definition and choose the parent member in the peak defintion popup.
+
+2.  **Context menu or keyboard shortcut**: Class IO also provide a command and a context menu item to navigate to parent: while cursor is on the child member, right click mouse and choose "Go To Parent", or click the default keybinding: Alt+Shift+G
 
 # Performance
 
