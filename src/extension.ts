@@ -5,9 +5,11 @@ import {
   Memento,
   commands,
   languages,
-  workspace
+  workspace,
+  window
 } from "vscode";
-import { supportedDocument, updateConfig, Config } from "./configuration";
+import { goToParent } from "./commands/go-to-parent";
+import { Config, supportedDocument, updateConfig } from "./configuration";
 import { excute } from "./decoration";
 import { ClassIOCache } from "./models";
 import { ClassIODefinitionProvider } from "./provider";
@@ -29,6 +31,9 @@ export function activate(context: ExtensionContext) {
     workspace.onDidOpenTextDocument(activeEditor => {
       excute();
     }),
+    window.onDidChangeActiveTextEditor(editor => {
+      excute();
+    }),
     workspace.onDidChangeTextDocument(event => {
       if (Config.timer) {
         clearTimeout(Config.timer);
@@ -39,6 +44,8 @@ export function activate(context: ExtensionContext) {
       supportedDocument,
       new ClassIODefinitionProvider()
     ),
+
+    commands.registerCommand("classio.goToParent", goToParent),
 
     workspace.onDidChangeConfiguration(updateConfig),
     workspace.onDidSaveTextDocument(doc => {

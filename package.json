@@ -46,8 +46,24 @@
       {
         "command": "classio.cleanCache",
         "title": "Classio: Clean Cache"
+      },
+      {
+        "command": "classio.goToParent",
+        "title": "Go To Parent"
       }
-    ]
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "classio.goToParent",
+          "group": "navigation"
+        }
+      ]
+    },
+    "keybindings": {
+      "command": "classio.goToParent",
+      "key": "shift+alt+g"
+    }
   },
   "keywords": [
     "codelens",

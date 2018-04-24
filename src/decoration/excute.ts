@@ -9,23 +9,25 @@ import {
 } from "../commands";
 import { ClassParents } from "../models";
 import { DecorationOptionsForParents } from "../models/decoration-options";
-import { decorateEditor } from "./decorate-editor";
+import { decorateEditor, clearDecoration } from "./decorate-editor";
 import { getDecorationByParent } from "./get-decoration-by-parent";
 export async function excute() {
   try {
     const activeEditor = window.activeTextEditor;
     if (!activeEditor) {
-      return {};
+      return;
     }
     const document = activeEditor.document;
     const text = document.getText();
     if (!hasBaseClass(text) && !hasInterfaces(text)) {
+      clearDecoration(activeEditor);
       return {};
     }
     const symbols = await getSymbolsOpenedUri(document.uri);
     // if there is no symbols in the current document, return;
     if (symbols.length === 0) {
-      return {};
+      clearDecoration(activeEditor);
+      return;
     }
     let classParents: ClassParents = {};
 
