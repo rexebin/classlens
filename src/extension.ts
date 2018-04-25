@@ -6,7 +6,8 @@ import {
   commands,
   languages,
   workspace,
-  window
+  window,
+  TextEditor
 } from "vscode";
 import { goToParent } from "./commands/go-to-parent";
 import { Config, supportedDocument, updateConfig } from "./configuration";
@@ -29,17 +30,13 @@ export function activate(context: ExtensionContext) {
       saveCache();
     }),
     workspace.onDidOpenTextDocument(doc => {
-      refreshDecorations(window.activeTextEditor);
+      updateDecorations(window.activeTextEditor);
     }),
     window.onDidChangeActiveTextEditor(editor => {
-      refreshDecorations(editor);
+      updateDecorations(editor);
     }),
     workspace.onDidChangeTextDocument(event => {
-      const editor = window.activeTextEditor;
-      if (Config.timer) {
-        clearTimeout(Config.timer);
-      }
-      Config.timer = setTimeout(refreshDecorations, 500, editor);
+      updateDecorations(window.activeTextEditor);
     }),
     languages.registerDefinitionProvider(
       supportedDocument,
@@ -69,4 +66,14 @@ export function deactivate() {}
 
 export function saveCache() {
   workspaceState.update("classio", Config.classIOCache);
+}
+
+function updateDecorations(editor?: TextEditor) {
+  if (!editor) {
+    return;
+  }
+  if (Config.timer) {
+    clearTimeout(Config.timer);
+  }
+  Config.timer = setTimeout(refreshDecorations, 500, editor);
 }
