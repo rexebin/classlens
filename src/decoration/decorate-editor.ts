@@ -1,9 +1,13 @@
 import { TextEditor, window } from "vscode";
 import { Config } from "../configuration";
 import { DecorationOptionsForParents } from "../models/decoration-options";
-export function decorateEditor(decoration: DecorationOptionsForParents) {
-  const activeEditor = window.activeTextEditor;
-  if (!activeEditor) {
+export function decorateEditor(
+  decoration: DecorationOptionsForParents,
+  activeEditor: TextEditor
+) {
+  const editor = window.activeTextEditor;
+
+  if (!activeEditor || editor !== activeEditor) {
     return;
   }
   clearDecoration(activeEditor).then(() =>

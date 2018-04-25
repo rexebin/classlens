@@ -56,14 +56,28 @@
       "editor/context": [
         {
           "command": "classio.goToParent",
-          "group": "navigation"
+          "group": "navigation",
+          "when": "editorLangId=='typescript'"
+        },
+        {
+          "command": "classio.goToParent",
+          "group": "navigation",
+          "when": "editorLangId=='javascript'"
         }
       ]
     },
-    "keybindings": {
-      "command": "classio.goToParent",
-      "key": "shift+alt+g"
-    }
+    "keybindings": [
+      {
+        "command": "classio.goToParent",
+        "key": "shift+alt+g",
+        "when": "editorLangId=='javascript'"
+      },
+      {
+        "command": "classio.goToParent",
+        "key": "shift+alt+g",
+        "when": "editorLangId=='typescript'"
+      }
+    ]
   },
   "keywords": ["typescript", "class", "interface", "hierarchy", "inheritance"],
   "main": "./out/extension",

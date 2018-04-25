@@ -10,7 +10,7 @@ import {
 } from "vscode";
 import { goToParent } from "./commands/go-to-parent";
 import { Config, supportedDocument, updateConfig } from "./configuration";
-import { excute } from "./decoration";
+import { refreshDecorations } from "./decoration";
 import { ClassIOCache } from "./models";
 import { ClassIODefinitionProvider } from "./provider";
 
@@ -28,17 +28,17 @@ export function activate(context: ExtensionContext) {
       Config.classIOCache = [];
       saveCache();
     }),
-    workspace.onDidOpenTextDocument(activeEditor => {
-      excute();
+    workspace.onDidOpenTextDocument(doc => {
+      refreshDecorations(window.activeTextEditor);
     }),
     window.onDidChangeActiveTextEditor(editor => {
-      excute();
+      refreshDecorations(editor);
     }),
     workspace.onDidChangeTextDocument(event => {
       if (Config.timer) {
         clearTimeout(Config.timer);
       }
-      Config.timer = setTimeout(excute, 500);
+      Config.timer = setTimeout(refreshDecorations, 500);
     }),
     languages.registerDefinitionProvider(
       supportedDocument,

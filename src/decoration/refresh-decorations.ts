@@ -1,4 +1,4 @@
-import { SymbolKind, window } from "vscode";
+import { SymbolKind, TextEditor } from "vscode";
 import {
   excutePromises,
   getBaseClassSymbol,
@@ -9,11 +9,10 @@ import {
 } from "../commands";
 import { ClassParents } from "../models";
 import { DecorationOptionsForParents } from "../models/decoration-options";
-import { decorateEditor, clearDecoration } from "./decorate-editor";
+import { clearDecoration, decorateEditor } from "./decorate-editor";
 import { getDecorationByParent } from "./get-decoration-by-parent";
-export async function excute() {
+export async function refreshDecorations(activeEditor?: TextEditor) {
   try {
-    const activeEditor = window.activeTextEditor;
     if (!activeEditor) {
       return;
     }
@@ -84,7 +83,9 @@ export async function excute() {
         );
       });
     });
-    excutePromises(promises).then(decoration => decorateEditor(decoration));
+    excutePromises(promises).then(decoration =>
+      decorateEditor(decoration, activeEditor)
+    );
   } catch (error) {
     throw error;
   }
