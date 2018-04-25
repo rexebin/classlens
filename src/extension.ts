@@ -35,10 +35,11 @@ export function activate(context: ExtensionContext) {
       refreshDecorations(editor);
     }),
     workspace.onDidChangeTextDocument(event => {
+      const editor = window.activeTextEditor;
       if (Config.timer) {
         clearTimeout(Config.timer);
       }
-      Config.timer = setTimeout(refreshDecorations, 500);
+      Config.timer = setTimeout(refreshDecorations, 500, editor);
     }),
     languages.registerDefinitionProvider(
       supportedDocument,
