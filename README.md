@@ -4,7 +4,7 @@
 
 **Performance and reliability are the top priorities**
 
-I switch from Webstorm to vscode and find myself missing a feature miserably: the ability to see which members in a class are overides to a base class and which members are interface implementations with a glance, plus the ability to navigate to the parent member quickly. Failing to find anything in the Marketplace, I finally developed this extension **ClassLens**, just to do what Webstorm does in in the form of CodeLens in vscode .
+I switch from Webstorm to vscode and find myself missing a feature miserably: the ability to see which members in a class are overides to a base class and which members are interface implementations with a glance, plus the ability to navigate to the parent member quickly. Failing to find anything in the Marketplace, I finally developed this extension **ClassLens**, just to do what Webstorm does in in the form of CodeLens in vscode.
 
 As the name implies, ClassLens marks the following members in an class in the form of Codelens, when vscode CodeLens is enabled:
 
@@ -16,6 +16,10 @@ ClassLens also allows you to quickly navigate to the parent member by clicking o
 ```
 "classLens.openSideBySide": false
 ```
+
+# Non Codelens Alternative
+
+If you prefer Codelens to be disabled for absolute performance, install **_Class IO_** instead. **_Class IO_** does the same thing but is not a codelens extension. It decorates members and provide definitions and a command to go to parent members.
 
 # Performance
 
