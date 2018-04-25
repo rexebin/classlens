@@ -7,7 +7,7 @@ import {
   commands,
   workspace
 } from "vscode";
-import { hasBaseClass } from "./util";
+import { hasParents, baseClassRegex } from ".";
 
 /**
  *
@@ -49,7 +49,41 @@ export async function getSymbolsOpenedUri(
     throw error;
   }
 }
-
+// export function getCSharpSymbols(
+//   doc: TextDocument,
+//   classSymbol: SymbolInformation,
+//   symbols: SymbolInformation[]
+// ): SymbolInformation[] {
+//   let parentsAndInterfaces = doc.getText();
+//   const classIndex = parentsAndInterfaces.indexOf("class " + classSymbol.name);
+//   if (classIndex === -1) {
+//     return [];
+//   }
+//   parentsAndInterfaces = parentsAndInterfaces.slice(classIndex);
+//   const columnIndex = parentsAndInterfaces.indexOf(":");
+//   let parents: string[] = [];
+//   if (columnIndex >= 0) {
+//     let parentText = parentsAndInterfaces.slice(columnIndex + 1);
+//     parents = parentText.slice(0, parentText.indexOf("{")).split(",");
+//     if (parents) {
+//       parents = parents.map(i => i.trim());
+//     }
+//   } else {
+//     return [];
+//   }
+//   // get interface symbols by names from given symbols list.
+//   let parentSymbols: SymbolInformation[] = [];
+//   parents.forEach(i => {
+//     const s = symbols.find(
+//       // symbols often doesn't include generic part, remove it to find all valid interface symbols
+//       s => s.name.replace(/(<).+(>)/, "") === i.replace(/(<).+(>)/, "")
+//     );
+//     if (s) {
+//       parentSymbols.push(s);
+//     }
+//   });
+//   return parentSymbols;
+// }
 /**
  *
  * Return symbols of interfaces of a given class.
@@ -81,16 +115,18 @@ export function getInterfaceSymbols(
     if (interfaces) {
       interfaces = interfaces.map(i => i.trim());
     }
+  } else {
+    return [];
   }
   // get interface symbols by names from given symbols list.
   let interfaceSymbols: SymbolInformation[] = [];
   interfaces.forEach(i => {
-    const s = symbols.filter(
+    const s = symbols.find(
       // symbols often doesn't include generic part, remove it to find all valid interface symbols
       s => s.name.replace(/(<).+(>)/, "") === i.replace(/(<).+(>)/, "")
     );
-    if (s && s.length > 0) {
-      interfaceSymbols.push(s[0]);
+    if (s) {
+      interfaceSymbols.push(s);
     }
   });
   return interfaceSymbols;
@@ -110,7 +146,7 @@ export function getBaseClassSymbol(
   classSymbol: SymbolInformation,
   symbols: SymbolInformation[]
 ): SymbolInformation | undefined {
-  if (!hasBaseClass(doc.getText(classSymbol.location.range))) {
+  if (!hasParents(doc.getText(classSymbol.location.range), baseClassRegex)) {
     return;
   }
   let parentsAndInterfaces = getClassTextFromClassName(doc, classSymbol);
@@ -129,11 +165,11 @@ export function getBaseClassSymbol(
   if (!parentClassName) {
     return;
   }
-  return symbols.filter(
+  return symbols.find(
     // remove generic signature.
     s =>
       s.name.replace(/(<).+(>)/, "") === parentClassName.replace(/(<).+(>)/, "")
-  )[0];
+  );
 }
 
 /**

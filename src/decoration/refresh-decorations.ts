@@ -1,11 +1,12 @@
-import { SymbolKind, TextEditor } from "vscode";
+import { TextDocument, TextEditor } from "vscode";
 import {
-  excutePromises,
+  baseClassRegex,
   getBaseClassSymbol,
   getInterfaceSymbols,
   getSymbolsOpenedUri,
-  hasBaseClass,
-  hasInterfaces
+  hasParents,
+  interfaceRegex,
+  mergeDecorations
 } from "../commands";
 import { ClassParents } from "../models";
 import { DecorationOptionsForParents } from "../models/decoration-options";
@@ -16,12 +17,16 @@ export async function refreshDecorations(activeEditor?: TextEditor) {
     if (!activeEditor) {
       return;
     }
-    const document = activeEditor.document;
+    const document: TextDocument = activeEditor.document;
     const text = document.getText();
-    if (!hasBaseClass(text) && !hasInterfaces(text)) {
+    if (
+      !hasParents(text, baseClassRegex) &&
+      !hasParents(text, interfaceRegex)
+    ) {
       clearDecoration(activeEditor);
       return {};
     }
+
     const symbols = await getSymbolsOpenedUri(document.uri);
     // if there is no symbols in the current document, return;
     if (symbols.length === 0) {
@@ -51,41 +56,26 @@ export async function refreshDecorations(activeEditor?: TextEditor) {
         classSymbol,
         symbols
       );
-      classParents[className] = {
-        baseClass: baseClassSymbol,
-        interfaces: interfaceSymbols
-      };
-    });
-
-    let promises: Promise<DecorationOptionsForParents>[] = [];
-    Object.keys(classParents).forEach(className => {
-      const baseClass = classParents[className].baseClass;
-      if (baseClass) {
-        promises.push(
-          getDecorationByParent(
-            baseClass,
-            document.uri,
-            SymbolKind.Class,
-            symbols,
-            className
-          )
-        );
+      if (baseClassSymbol) {
+        classParents[className] = [baseClassSymbol, ...interfaceSymbols];
+      } else {
+        classParents[className] = interfaceSymbols;
       }
-      classParents[className].interfaces.forEach(interfacSymbol => {
-        promises.push(
-          getDecorationByParent(
-            interfacSymbol,
-            document.uri,
-            SymbolKind.Interface,
-            symbols,
-            className
-          )
-        );
-      });
     });
-    excutePromises(promises).then(decoration =>
-      decorateEditor(decoration, activeEditor)
-    );
+    let decorations: DecorationOptionsForParents = {
+      class: [],
+      interface: []
+    };
+    const classNames = Object.keys(classParents);
+    for (let className of classNames) {
+      for (let symbol of classParents[className]) {
+        decorations = mergeDecorations([
+          decorations,
+          await getDecorationByParent(symbol, document.uri, symbols, className)
+        ]);
+      }
+    }
+    decorateEditor(decorations, activeEditor);
   } catch (error) {
     throw error;
   }

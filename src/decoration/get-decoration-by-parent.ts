@@ -11,7 +11,6 @@ import { Config } from "../configuration";
 export async function getDecorationByParent(
   parentSymbolInCurrentUri: SymbolInformation,
   currentUri: Uri,
-  kind: SymbolKind,
   symbolsInCurrentUri: SymbolInformation[],
   className: string
 ): Promise<DecorationOptionsForParents> {
@@ -28,27 +27,22 @@ export async function getDecorationByParent(
     let parentSymbolsInCurrentUri = symbolsInCurrentUri.filter(
       s => s.containerName === parentSymbolInCurrentUri.name
     );
+
     if (parentSymbolsInCurrentUri.length > 0) {
-      // if (
-      //   !Config.classIOCache.find(s => s.parentUriFspath === currentUri.fsPath)
-      // ) {
-      //   Config.classIOCache.push({
-      //     childFileNames: { [currentUri.fsPath]: currentUri.fsPath },
-      //     parentNamesAndChildren: {
-      //       [parentSymbolInCurrentUri.name]: targetSymbolNames
-      //     },
-      //     parentUriFspath: currentUri.fsPath,
-      //     parentSymbols: convertToCachedSymbols(parentSymbolsInCurrentUri)
-      //   });
-      //   saveCache();
-      //   console.log(Config.classIOCache);
-      // }
-      return generateDeorations(
-        targetSymbols,
-        parentSymbolInCurrentUri,
-        convertToCachedSymbols(parentSymbolsInCurrentUri),
-        kind
+      const parent = symbolsInCurrentUri.find(
+        s => s.name === parentSymbolInCurrentUri.name
       );
+      if (parent) {
+        return generateDeorations(
+          targetSymbols,
+          parentSymbolInCurrentUri,
+          convertToCachedSymbols([...parentSymbolsInCurrentUri, parent])
+        );
+      }
+      return {
+        class: [],
+        interface: []
+      };
     }
     /**
      * Check if the cache has symbols of the parent class/interface file.
@@ -68,8 +62,7 @@ export async function getDecorationByParent(
       return generateDeorations(
         targetSymbols,
         parentSymbolInCurrentUri,
-        cache.parentSymbols,
-        kind
+        cache.parentSymbols
       );
     }
 
@@ -105,8 +98,7 @@ export async function getDecorationByParent(
       return generateDeorations(
         targetSymbols,
         parentSymbolInCurrentUri,
-        cache.parentSymbols,
-        kind
+        cache.parentSymbols
       );
     }
     // if we are here, then it is the first time we get symbols from parent uri.
@@ -128,8 +120,7 @@ export async function getDecorationByParent(
     return generateDeorations(
       targetSymbols,
       parentSymbolInCurrentUri,
-      convertToCachedSymbols(symbolsRemote),
-      kind
+      convertToCachedSymbols(symbolsRemote)
     );
   } catch (error) {
     throw error;

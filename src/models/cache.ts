@@ -13,6 +13,7 @@ export class CachedSymbol {
     public startLine: number,
     public startChar: number,
     public name: string,
-    public containerName: string
+    public containerName: string,
+    public kind: string
   ) {}
 }

@@ -1,12 +1,11 @@
-import { Position, Range, SymbolInformation, SymbolKind, window } from "vscode";
+import { Position, Range, SymbolInformation, window } from "vscode";
 import { CachedSymbol } from "../models";
 import { DecorationOptionsForParents } from "../models/decoration-options";
 
 export function generateDeorations(
   targetSymbols: SymbolInformation[],
   parentSymbol: SymbolInformation,
-  symbolsOfParent: CachedSymbol[],
-  kind: SymbolKind
+  symbolsOfParent: CachedSymbol[]
 ): DecorationOptionsForParents {
   let decorationOptionsForParent: DecorationOptionsForParents = {
     class: [],
@@ -27,7 +26,14 @@ export function generateDeorations(
     if (!parentPropertyMethodSymbol) {
       return;
     }
-    if (kind === SymbolKind.Class) {
+    const parentSymbolInParent = symbolsOfParent.find(
+      s => s.name === parentSymbol.name
+    );
+    if (!parentSymbolInParent) {
+      return;
+    }
+    const kind = parentSymbolInParent.kind;
+    if (kind === "class") {
       const decoration = {
         range: new Range(
           targetSymbol.location.range.start,
@@ -40,7 +46,7 @@ export function generateDeorations(
         hoverMessage: "override " + parentPropertyMethodSymbol.containerName
       };
       decorationOptionsForParent["class"].push(decoration);
-    } else if (kind === SymbolKind.Interface) {
+    } else if (kind === "interface") {
       const decoration = {
         range: new Range(
           targetSymbol.location.range.start,

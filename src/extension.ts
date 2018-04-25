@@ -29,14 +29,14 @@ export function activate(context: ExtensionContext) {
       Config.classIOCache = [];
       saveCache();
     }),
-    workspace.onDidOpenTextDocument(doc => {
-      updateDecorations(window.activeTextEditor);
+    workspace.onDidOpenTextDocument(async doc => {
+      await updateDecorations(window.activeTextEditor);
     }),
-    window.onDidChangeActiveTextEditor(editor => {
-      updateDecorations(editor);
+    window.onDidChangeActiveTextEditor(async editor => {
+      await updateDecorations(editor);
     }),
-    workspace.onDidChangeTextDocument(event => {
-      updateDecorations(window.activeTextEditor);
+    workspace.onDidChangeTextDocument(async event => {
+      await updateDecorations(window.activeTextEditor);
     }),
     languages.registerDefinitionProvider(
       supportedDocument,
@@ -68,12 +68,12 @@ export function saveCache() {
   workspaceState.update("classio", Config.classIOCache);
 }
 
-function updateDecorations(editor?: TextEditor) {
+async function updateDecorations(editor?: TextEditor) {
   if (!editor) {
     return;
   }
   if (Config.timer) {
     clearTimeout(Config.timer);
   }
-  Config.timer = setTimeout(refreshDecorations, 500, editor);
+  Config.timer = setTimeout(await refreshDecorations, 500, editor);
 }
