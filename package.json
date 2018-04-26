@@ -2,8 +2,8 @@
   "name": "classlens",
   "displayName": "ClassLens",
   "description":
-    "Class lens showing relationships with its interfaces and parent class.",
-  "version": "0.5.2",
+    "ClassLens shows class's relationships with its interfaces and parent class in the form of CodeLens",
+  "version": "0.5.3",
   "publisher": "rexebin",
   "engines": {
     "vscode": "^1.22.0"
