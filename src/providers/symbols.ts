@@ -13,7 +13,7 @@ import { hasParents, baseClassRegex } from ".";
  *
  * Get all symbols of the document with given uri.
  * 1. open the target document
- * 2. excute symbol provider against the just opened target document
+ * 2. execute symbol provider against the just opened target document
  *
  * Note: the function open file in the background. it will show the document to the user.
  *

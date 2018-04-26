@@ -4,12 +4,12 @@
 
 **Performance and reliability are the top priorities**
 
-I switch from Webstorm to vscode and find myself missing a feature miserably: the ability to see which members in a class are overides to a base class and which members are interface implementations with a glance, plus the ability to navigate to the parent member quickly. Failing to find anything in the Marketplace, I finally developed this extension **ClassLens**, just to do what Webstorm does in in the form of CodeLens in vscode.
+I switch from WebStorm to vscode and find myself missing a feature miserably: the ability to see which members in a class are overrides to a base class and which members are interface implementations with a glance, plus the ability to navigate to the parent member quickly. Failing to find anything in the Marketplace, I finally developed this extension **ClassLens**, just to do what WebStorm does in in the form of CodeLens in vscode.
 
 As the name implies, ClassLens marks the following members in an class in the form of Codelens, when vscode CodeLens is enabled:
 
-1.  any class member that is an implemtations of the class's interfaces.
-2.  any class member that overides base class' member.
+1.  any class member that is an implementations of the class's interfaces.
+2.  any class member that overrides base class' member.
 
 ClassLens also allows you to quickly navigate to the parent member by clicking on the CodeLens. File will be opened side by side by default. You can change the behaviour by adding this configuration to `User Settings`:
 
@@ -31,9 +31,9 @@ Classlens builds up a database alike cache as you develop your project. Therefor
 
 Caches will be saved to workspace state and each time you open vscode, Classlens will recover the cache from workspace state.
 
-Classlens does not proactively go and index your codebase like Webstorm does.
+Classlens does not go and index your codebase like WebStorm does.
 
-If you find Codelens showup really slow in your vscode, consider checking your extensions and try to disable any extensions that implement Codelens one by one, and see if Codelens' showing up speed is up.
+If you find Codelens show up really slow in your vscode, consider checking your extensions and try to disable any extensions that implement Codelens one by one, and see if Codelens' showing up speed is up.
 
 # Cache
 
@@ -42,6 +42,18 @@ To clean workspace cache:
 CTRL/CMD + P: then search for "Classlens: Clear Cache".
 
 Note: Reset cache when ClassLens is updated and it is not working on files opened before.
+
+# Support
+
+Really enjoying ClassLens?
+
+[Write a review](https://marketplace.visualstudio.com/items?itemName=rexebin.classlens#review-details)
+
+In a giving mood?
+
+[Donate](https://www.paypal.me/rexebin)
+
+Your support is greatly appreciated!
 
 # Links
 
