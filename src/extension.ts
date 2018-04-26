@@ -5,15 +5,16 @@ import {
   Memento,
   commands,
   languages,
-  workspace
+  workspace,
+  TextDocument
 } from "vscode";
 import { gotoParent, gotoParentCommandName } from "./commands";
-import { supportedDocument, updateConfig } from "./configuration";
+import { supportedDocument, updateConfig, Config } from "./configuration";
 import { ClassLensCache } from "./models";
 import { ClassLensProvider } from "./providers";
+import { log } from "./commands/logger";
 
-export let workspaceState: Memento;
-export let classLensCache: ClassLensCache[];
+let workspaceState: Memento;
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: ExtensionContext) {
@@ -21,12 +22,15 @@ export function activate(context: ExtensionContext) {
   // Now provide the implementation of the command with  registerCommand
   // The commandId parameter must match the command field in package.json
   workspaceState = context.workspaceState;
-  classLensCache = workspaceState.get<ClassLensCache[]>("classlens", []);
+  Config.classLensCache = workspaceState.get<ClassLensCache[]>("classlens", []);
+
   context.subscriptions.push(
     commands.registerCommand(gotoParentCommandName, gotoParent),
     commands.registerCommand("classlens.cleanCache", () => {
-      classLensCache = [];
+      log("clear cache");
+      Config.classLensCache = [];
       saveCache();
+      log(Config.classLensCache);
     }),
     languages.registerCodeLensProvider(
       supportedDocument,
@@ -34,16 +38,9 @@ export function activate(context: ExtensionContext) {
     ),
     workspace.onDidChangeConfiguration(updateConfig),
     workspace.onDidSaveTextDocument(doc => {
-      const cache = classLensCache.filter(
-        s => s.parentUriFspath === doc.fileName
-      );
-      if (cache.length > 0) {
-        cache.forEach(c => {
-          const index = classLensCache.indexOf(c);
-          classLensCache.splice(index, 1);
-        });
-        saveCache();
-      }
+      log("on save update cache");
+      startUpdateCacheTimer(doc);
+      log(Config.classLensCache);
     })
   );
 }
@@ -52,5 +49,27 @@ export function activate(context: ExtensionContext) {
 export function deactivate() {}
 
 export function saveCache() {
-  workspaceState.update("classlens", classLensCache);
+  workspaceState.update("classlens", Config.classLensCache);
+}
+
+async function startUpdateCacheTimer(doc: TextDocument) {
+  if (Config.timer) {
+    clearTimeout(Config.timer);
+  }
+  Config.timer = setTimeout(updateCache, 500, doc);
+}
+
+function updateCache(doc: TextDocument) {
+  const cache = Config.classLensCache.filter(
+    s => s.parentUriFspath === doc.fileName
+  );
+  if (cache.length > 0) {
+    cache.forEach(c => {
+      const index = Config.classLensCache.indexOf(c);
+      Config.classLensCache.splice(index, 1);
+      log("remove from cache:");
+      log(Config.classLensCache[index]);
+    });
+    saveCache();
+  }
 }

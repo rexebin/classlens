@@ -39,7 +39,9 @@ If you find Codelens showup really slow in your vscode, consider checking your e
 
 To clean workspace cache:
 
-CTRL/CMD + P: then search for "Classlens: Clean Cache".
+CTRL/CMD + P: then search for "Classlens: Clear Cache".
+
+Note: Reset cache when ClassLens is updated and it is not working on files opened before.
 
 # Links
 

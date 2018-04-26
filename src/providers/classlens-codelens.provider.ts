@@ -4,7 +4,6 @@ import {
   CancellationToken,
   CodeLens,
   CodeLensProvider,
-  SymbolKind,
   TextDocument
 } from "vscode";
 import { ClassParents } from "../models";
@@ -14,27 +13,31 @@ import {
   getInterfaceSymbols,
   getSymbolsOpenedUri
 } from "./symbols";
-import { excutePromises, hasBaseClass, hasInterfaces } from "./util";
+import { hasParents, baseClassRegex, interfaceRegex } from ".";
+import { log } from "../commands/logger";
 
 /**
  * Codelens Provider for Base class.
  */
 export class ClassLensProvider implements CodeLensProvider {
-  provideCodeLenses(
+  async provideCodeLenses(
     document: TextDocument,
     token: CancellationToken
-  ): CodeLens[] | Thenable<CodeLens[]> {
+  ): Promise<CodeLens[]> {
     /**
      * if there is no base class or interfaces in the whole file, skip.
      */
     const text = document.getText();
-    if (!hasBaseClass(text) && !hasInterfaces(text)) {
+    if (
+      !hasParents(text, baseClassRegex) &&
+      !hasParents(text, interfaceRegex)
+    ) {
       return [];
     }
     /**
      * if there is a base class or interface in the file, then continue.
      */
-    return this.provideClassCodelens(document);
+    return await this.provideClassCodelens(document);
   }
 
   /**
@@ -44,11 +47,11 @@ export class ClassLensProvider implements CodeLensProvider {
   async provideClassCodelens(document: TextDocument): Promise<CodeLens[]> {
     try {
       const symbols = await getSymbolsOpenedUri(document.uri);
+      log("start provider, symbols of current file:");
       // if there is no symbols in the current document, return;
       if (symbols.length === 0) {
         return [];
       }
-      let promises: Promise<CodeLens[]>[] = [];
 
       let classParents: ClassParents = {};
 
@@ -73,38 +76,34 @@ export class ClassLensProvider implements CodeLensProvider {
           classSymbol,
           symbols
         );
-        classParents[className] = {
-          baseClass: baseClassSymbol,
-          interfaces: interfaceSymbols
-        };
-      });
-
-      Object.keys(classParents).forEach(className => {
-        const baseClass = classParents[className].baseClass;
-        if (baseClass) {
-          promises.push(
-            getCodeLensForParents(
-              baseClass,
-              document.uri,
-              SymbolKind.Class,
-              symbols,
-              className
-            )
-          );
+        if (baseClassSymbol) {
+          classParents[className] = [baseClassSymbol, ...interfaceSymbols];
+        } else {
+          classParents[className] = interfaceSymbols;
         }
-        classParents[className].interfaces.forEach(interfacSymbol => {
-          promises.push(
-            getCodeLensForParents(
-              interfacSymbol,
+      });
+      log("unique classes:");
+      log(uniqueClasses);
+      log("class parents:");
+      log(classParents);
+      let codeLens: CodeLens[] = [];
+      const classNames = Object.keys(classParents);
+      for (let className of classNames) {
+        for (let symbol of classParents[className]) {
+          codeLens = [
+            ...codeLens,
+            ...(await getCodeLensForParents(
+              symbol,
               document.uri,
-              SymbolKind.Interface,
               symbols,
               className
-            )
-          );
-        });
-      });
-      return excutePromises(promises);
+            ))
+          ];
+        }
+      }
+      log("complete, codelens:");
+      log(codeLens);
+      return codeLens;
     } catch (error) {
       throw error;
     }

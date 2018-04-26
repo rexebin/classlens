@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.5.0
+
+1.  Restructure Cache: please clear cache after update.
+2.  optimize performance.
+
 ## 0.4.3
 
 Fix: navigation - broken in 0.4.0 due to vscode's cache serialisation.

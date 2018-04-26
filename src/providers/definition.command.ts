@@ -12,7 +12,7 @@ import { Uri, Position, Location, commands } from "vscode";
 export async function getDefinitionLocation(
   uri: Uri,
   position: Position
-): Promise<Location> {
+): Promise<Location | undefined> {
   try {
     const locations = await commands.executeCommand<Location[]>(
       "vscode.executeDefinitionProvider",
@@ -23,7 +23,7 @@ export async function getDefinitionLocation(
     if (locations) {
       return locations[0];
     }
-    throw new Error("Definition not found");
+    return;
   } catch (error) {
     throw error;
   }

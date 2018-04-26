@@ -1,8 +1,8 @@
 "use strict";
 
 export interface ClassLensCache {
-  currentFileName: string[];
-  parentSymbolName: string[];
+  childFileNames: { [filename: string]: string };
+  parentNamesAndChildren: { [parentName: string]: string[] };
   parentUriFspath: string;
   parentSymbols: CachedSymbol[];
 }
@@ -13,6 +13,7 @@ export class CachedSymbol {
     public startLine: number,
     public startChar: number,
     public name: string,
-    public containerName: string
+    public containerName: string,
+    public kind: string
   ) {}
 }
