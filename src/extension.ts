@@ -39,7 +39,7 @@ export function activate(context: ExtensionContext) {
     workspace.onDidChangeConfiguration(updateConfig),
     workspace.onDidSaveTextDocument(doc => {
       log("on save update cache");
-      startUpdateCacheTimer(doc);
+      updateCache(doc);
       log(Config.classLensCache);
     })
   );
@@ -50,13 +50,6 @@ export function deactivate() {}
 
 export function saveCache() {
   workspaceState.update("classlens", Config.classLensCache);
-}
-
-async function startUpdateCacheTimer(doc: TextDocument) {
-  if (Config.timer) {
-    clearTimeout(Config.timer);
-  }
-  Config.timer = setTimeout(updateCache, 500, doc);
 }
 
 function updateCache(doc: TextDocument) {
