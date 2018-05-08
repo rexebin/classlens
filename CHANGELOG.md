@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.6.1
+
+Add language support for react tsx.
+
 ## 0.6.0
 
 Add support for namespace.
