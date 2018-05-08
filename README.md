@@ -63,6 +63,12 @@ Note: Reset cache when ClassLens is updated and it is not working on files opene
 
 # Support
 
+Doesn't work or have a suggestion?
+
+[Raise an issue](https://github.com/rexebin/classlens/issues)
+
+[Submit a PR](https://github.com/rexebin/classlens/pulls)
+
 Really enjoying ClassLens?
 
 [Write a review](https://marketplace.visualstudio.com/items?itemName=rexebin.classlens#review-details)
