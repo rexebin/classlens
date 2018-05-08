@@ -4,28 +4,18 @@ import {
   CancellationToken,
   CodeLens,
   CodeLensProvider,
-  TextDocument,
-  SymbolKind,
-  SymbolInformation
+  TextDocument
 } from "vscode";
+import { baseClassRegex, hasParents, interfaceRegex } from ".";
+import { log } from "../commands/logger";
 import { ClassParents } from "../models";
 import { getCodeLensForParents } from "./codelens-generator";
 import {
   getBaseClassSymbol,
   getInterfaceSymbols,
-  getSymbolsOpenedUri,
-  getSymbolsByUri,
-  getNameSpacePosition,
-  getSymbolsForModules
+  getSymbolsForModules,
+  getSymbolsOpenedUri
 } from "./symbols";
-import {
-  hasParents,
-  baseClassRegex,
-  interfaceRegex,
-  getFirstDefinitionLocation,
-  getAllDefinitions
-} from ".";
-import { log } from "../commands/logger";
 
 /**
  * Codelens Provider for Base class.
