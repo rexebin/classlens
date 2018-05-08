@@ -3,7 +3,7 @@
   "displayName": "ClassLens",
   "description":
     "ClassLens shows class's relationships with its interfaces and parent class in the form of CodeLens",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "publisher": "rexebin",
   "engines": {
     "vscode": "^1.22.0"

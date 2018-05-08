@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.6.2
+
+Add limitations in readme.
+
 ## 0.6.1
 
 Add language support for react tsx.

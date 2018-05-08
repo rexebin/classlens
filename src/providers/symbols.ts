@@ -106,7 +106,15 @@ export function getInterfaceNames(
       .slice(0, interfacesText.indexOf("{"))
       .split(",");
     if (interfaces) {
-      interfaces = interfaces.map(i => i.trim());
+      interfaces = interfaces.map(i => i.trim()).map(i => {
+        if (i.indexOf(".") !== -1) {
+          const name = i.split(".").pop();
+          if (name) {
+            return name;
+          }
+        }
+        return i;
+      });
     }
   }
   return interfaces;
@@ -130,11 +138,11 @@ export function getBaseClassSymbol(
   if (!parentClassName) {
     return;
   }
-  return symbols.filter(
+  return symbols.find(
     // remove generic signature.
     s =>
       s.name.replace(/(<).+(>)/, "") === parentClassName.replace(/(<).+(>)/, "")
-  )[0];
+  );
 }
 
 export function getBaseClassName(
@@ -152,14 +160,21 @@ export function getBaseClassName(
     0,
     parentsAndInterfaces.indexOf("{")
   );
-  let matches = parentsAndInterfaces.match(/(extends)\s+(\w+)/);
+  let matches = parentsAndInterfaces.match(/(extends)\s+((\w|\.)+)/);
   if (!matches || !matches[0]) {
     return "";
   }
-  const parentClassName = matches[0].replace("extends", "").trim();
+  let parentClassName = matches[0].replace("extends", "").trim();
   if (!parentClassName) {
     return "";
   }
+  if (parentClassName.indexOf(".") !== -1) {
+    const parent = parentClassName.split(".").pop();
+    if (parent) {
+      parentClassName = parent;
+    }
+  }
+  log(parentClassName);
   return parentClassName;
 }
 

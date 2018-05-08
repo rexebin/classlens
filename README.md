@@ -17,6 +17,24 @@ ClassLens also allows you to quickly navigate to the parent member by clicking o
 "classLens.openSideBySide": false
 ```
 
+# Limitations
+
+1.  ClassLens does not support batch import, for example:
+
+    ```
+    import * as Layout from '@your-project/layout';
+
+    export class ClassName extends Layout.BaseClass implements Layout.LayoutInterface {
+
+    }
+    ```
+
+    I may fix this if there is high demand in the future.
+
+1.  ClassLens supports namespaces partially. It supports class structures within the same namespace. It does not support extends/implements class/interfaces from other namespaces. The reason is vscode ignore these symbols when performing symbol lookups. And at the moment (1.23) vscode returns empty object arrays when look up for definitions for these symbols in the extension. I have not found a good solution yet.
+
+1.  ClassLens also may not support multiple level of parent classes/interfaces i.e. parent class extending other class and interfaces extend other interfaces. I may fix this point if if there is high demand for it in the future.
+
 # Non Codelens Alternative
 
 If you prefer Codelens to be disabled for absolute tidiness, install **_Class IO_** instead. **_Class IO_** does the same thing but is not a codelens extension. It decorates members and provide definitions and a command to go to parent members.
