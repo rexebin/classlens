@@ -9,10 +9,26 @@ import { Uri, Position, Location, commands } from "vscode";
  * @returns a promise of parent class/interface's location
  */
 
-export async function getDefinitionLocation(
+export async function getFirstDefinitionLocation(
   uri: Uri,
   position: Position
 ): Promise<Location | undefined> {
+  try {
+    const locations = await getAllDefinitions(uri, position);
+
+    if (locations) {
+      return locations[0];
+    }
+    return;
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function getAllDefinitions(
+  uri: Uri,
+  position: Position
+): Promise<Location[]> {
   try {
     const locations = await commands.executeCommand<Location[]>(
       "vscode.executeDefinitionProvider",
@@ -21,9 +37,9 @@ export async function getDefinitionLocation(
     );
 
     if (locations) {
-      return locations[0];
+      return locations;
     }
-    return;
+    return [];
   } catch (error) {
     throw error;
   }

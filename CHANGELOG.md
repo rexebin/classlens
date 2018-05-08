@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.6.0
+
+Add support for namespace.
+
 ## 0.5.0
 
 1.  Restructure Cache: please clear cache after update.

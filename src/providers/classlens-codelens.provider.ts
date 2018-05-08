@@ -4,16 +4,27 @@ import {
   CancellationToken,
   CodeLens,
   CodeLensProvider,
-  TextDocument
+  TextDocument,
+  SymbolKind,
+  SymbolInformation
 } from "vscode";
 import { ClassParents } from "../models";
 import { getCodeLensForParents } from "./codelens-generator";
 import {
   getBaseClassSymbol,
   getInterfaceSymbols,
-  getSymbolsOpenedUri
+  getSymbolsOpenedUri,
+  getSymbolsByUri,
+  getNameSpacePosition,
+  getSymbolsForModules
 } from "./symbols";
-import { hasParents, baseClassRegex, interfaceRegex } from ".";
+import {
+  hasParents,
+  baseClassRegex,
+  interfaceRegex,
+  getFirstDefinitionLocation,
+  getAllDefinitions
+} from ".";
 import { log } from "../commands/logger";
 
 /**
@@ -46,12 +57,16 @@ export class ClassLensProvider implements CodeLensProvider {
    */
   async provideClassCodelens(document: TextDocument): Promise<CodeLens[]> {
     try {
-      const symbols = await getSymbolsOpenedUri(document.uri);
+      let symbols = await getSymbolsOpenedUri(document.uri);
       log("start provider, symbols of current file:");
+      log(symbols);
       // if there is no symbols in the current document, return;
       if (symbols.length === 0) {
         return [];
       }
+
+      const moduleSymbols = await getSymbolsForModules(document, symbols);
+      symbols = [...symbols, ...moduleSymbols];
 
       let classParents: ClassParents = {};
 

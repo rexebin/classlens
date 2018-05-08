@@ -5,9 +5,12 @@ import {
   TextDocument,
   Uri,
   commands,
-  workspace
+  workspace,
+  Position,
+  SymbolKind
 } from "vscode";
-import { hasParents, baseClassRegex } from ".";
+import { hasParents, baseClassRegex, getAllDefinitions } from ".";
+import { log } from "../commands/logger";
 
 /**
  *
@@ -64,6 +67,30 @@ export function getInterfaceSymbols(
   classSymbol: SymbolInformation,
   symbols: SymbolInformation[]
 ): SymbolInformation[] {
+  const interfaces = getInterfaceNames(doc, classSymbol);
+  // get interface symbols by names from given symbols list.
+  let interfaceSymbols: SymbolInformation[] = [];
+  interfaces.forEach(i => {
+    const s = symbols.filter(
+      // symbols often doesn't include generic part, remove it to find all valid interface symbols
+      s => s.name.replace(/(<).+(>)/, "") === i.replace(/(<).+(>)/, "")
+    );
+    if (s && s.length > 0) {
+      interfaceSymbols.push(s[0]);
+    }
+  });
+  return interfaceSymbols;
+}
+
+/**
+ * Get interface names of a given class.
+ * @param doc document object of current uri.
+ * @param classSymbol class symbol
+ */
+export function getInterfaceNames(
+  doc: TextDocument,
+  classSymbol: SymbolInformation
+): string[] {
   let parentsAndInterfaces = getClassTextFromClassName(doc, classSymbol);
   if (parentsAndInterfaces === "") {
     return [];
@@ -82,18 +109,7 @@ export function getInterfaceSymbols(
       interfaces = interfaces.map(i => i.trim());
     }
   }
-  // get interface symbols by names from given symbols list.
-  let interfaceSymbols: SymbolInformation[] = [];
-  interfaces.forEach(i => {
-    const s = symbols.filter(
-      // symbols often doesn't include generic part, remove it to find all valid interface symbols
-      s => s.name.replace(/(<).+(>)/, "") === i.replace(/(<).+(>)/, "")
-    );
-    if (s && s.length > 0) {
-      interfaceSymbols.push(s[0]);
-    }
-  });
-  return interfaceSymbols;
+  return interfaces;
 }
 
 /**
@@ -110,22 +126,7 @@ export function getBaseClassSymbol(
   classSymbol: SymbolInformation,
   symbols: SymbolInformation[]
 ): SymbolInformation | undefined {
-  if (!hasParents(doc.getText(classSymbol.location.range), baseClassRegex)) {
-    return;
-  }
-  let parentsAndInterfaces = getClassTextFromClassName(doc, classSymbol);
-  if (parentsAndInterfaces === "") {
-    return;
-  }
-  parentsAndInterfaces = parentsAndInterfaces.slice(
-    0,
-    parentsAndInterfaces.indexOf("{")
-  );
-  let matches = parentsAndInterfaces.match(/(extends)\s+(\w+)/);
-  if (!matches || !matches[0]) {
-    return;
-  }
-  const parentClassName = matches[0].replace("extends", "").trim();
+  let parentClassName = getBaseClassName(doc, classSymbol);
   if (!parentClassName) {
     return;
   }
@@ -134,6 +135,32 @@ export function getBaseClassSymbol(
     s =>
       s.name.replace(/(<).+(>)/, "") === parentClassName.replace(/(<).+(>)/, "")
   )[0];
+}
+
+export function getBaseClassName(
+  doc: TextDocument,
+  classSymbol: SymbolInformation
+): string {
+  if (!hasParents(doc.getText(classSymbol.location.range), baseClassRegex)) {
+    return "";
+  }
+  let parentsAndInterfaces = getClassTextFromClassName(doc, classSymbol);
+  if (parentsAndInterfaces === "") {
+    return "";
+  }
+  parentsAndInterfaces = parentsAndInterfaces.slice(
+    0,
+    parentsAndInterfaces.indexOf("{")
+  );
+  let matches = parentsAndInterfaces.match(/(extends)\s+(\w+)/);
+  if (!matches || !matches[0]) {
+    return "";
+  }
+  const parentClassName = matches[0].replace("extends", "").trim();
+  if (!parentClassName) {
+    return "";
+  }
+  return parentClassName;
 }
 
 /**
@@ -159,4 +186,50 @@ function getClassTextFromClassName(
       classIndex + classSymbol.name.length + "class ".length
     );
   }
+}
+
+export function getNameSpacePosition(
+  doc: TextDocument,
+  moduleSymbol: SymbolInformation
+): Position {
+  const nameSpaceLineText = doc.getText(moduleSymbol.location.range);
+  const namespaceNameIndex = nameSpaceLineText.indexOf(moduleSymbol.name);
+  return new Position(
+    moduleSymbol.location.range.start.line,
+    namespaceNameIndex
+  );
+}
+/**
+ *
+ * @param document text document
+ * @param symbols all symbols of given text document
+ */
+export async function getSymbolsForModules(
+  document: TextDocument,
+  symbols: SymbolInformation[]
+): Promise<SymbolInformation[]> {
+  let modules = symbols.filter(s => s.kind === SymbolKind.Module);
+  let moduleSymbols: SymbolInformation[] = [];
+  for (let symbol of modules) {
+    log(symbol.location.range.start);
+    const definitions = await getAllDefinitions(
+      symbol.location.uri,
+      getNameSpacePosition(document, symbol)
+    );
+    if (definitions.length > 0) {
+      for (let def of definitions) {
+        if (def && def.uri && def.uri.fsPath !== document.uri.fsPath) {
+          const symbolsOfDef = await getSymbolsByUri(def.uri);
+          moduleSymbols = [...moduleSymbols, ...symbolsOfDef];
+        } else {
+          log("module def is current file, skip");
+        }
+      }
+    } else {
+      log("no module definitions found");
+    }
+  }
+  log("module symbols:");
+  log(moduleSymbols);
+  return moduleSymbols;
 }

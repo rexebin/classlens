@@ -3,7 +3,7 @@
 import { CodeLens, SymbolInformation, SymbolKind, Uri } from "vscode";
 import { saveCache } from "../extension";
 import { CachedSymbol } from "../models";
-import { getDefinitionLocation } from "./definition.command";
+import { getFirstDefinitionLocation } from "./definition.command";
 import { getSymbolsByUri } from "./symbols";
 import { convertToCachedSymbols } from "./util";
 import { Config } from "../configuration";
@@ -134,7 +134,7 @@ export async function getCodeLensForParents(
     }
     //if we are here, then the parent symbol is not in the current file and not in cache.
     // excuete definition provider to look for the parent file.
-    const location = await getDefinitionLocation(
+    const location = await getFirstDefinitionLocation(
       currentUri,
       parentSymbolInCurrentUri.location.range.start
     );
