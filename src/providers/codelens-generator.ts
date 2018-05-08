@@ -3,11 +3,11 @@
 import { CodeLens, SymbolInformation, SymbolKind, Uri } from "vscode";
 import { saveCache } from "../extension";
 import { CachedSymbol } from "../models";
-import { getFirstDefinitionLocation } from "./definition.command";
 import { getSymbolsByUri } from "./symbols";
 import { convertToCachedSymbols } from "./util";
 import { Config } from "../configuration";
 import { log } from "../commands/logger";
+import { getAllDefinitions } from ".";
 /**
  * Return Codelens for a given property/method symbol.
  *
@@ -133,69 +133,63 @@ export async function getCodeLensForParents(
       );
     }
     //if we are here, then the parent symbol is not in the current file and not in cache.
-    // excuete definition provider to look for the parent file.
-    const location = await getFirstDefinitionLocation(
+    // execute definition provider to look for the parent file.
+    const locations = await getAllDefinitions(
       currentUri,
       parentSymbolInCurrentUri.location.range.start
     );
+    for (let location of locations) {
+      // check if the parent class/interface's symbols are already in cache,
+      // maybe loaded by other files before.
+      cache = Config.classLensCache.find(
+        c => c.parentUriFspath === location.uri.fsPath
+      );
 
-    log("get definition for parent:");
+      // if found, then check if the cache already added
+      // current file name, if not, add the current file name and parent symbol name.
+      if (cache) {
+        log("found symbols of parents in cache:");
+        cache.childFileNames[currentFileName] = currentFileName;
+        cache.parentNamesAndChildren[
+          parentSymbolInCurrentUri.name
+        ] = targetSymbolNames;
 
-    if (!location) {
-      log("location not found");
-      return [];
-    }
-
-    log(location);
-
-    // check if the parent class/interface's symbols are already in cache,
-    // maybe loaded by other files before.
-    cache = Config.classLensCache.find(
-      c => c.parentUriFspath === location.uri.fsPath
-    );
-
-    // if found, then check if the cache already added
-    // current file name, if not, add the current file name and parent symbol name.
-    if (cache) {
-      log("found symbols of parents in cache:");
-      cache.childFileNames[currentFileName] = currentFileName;
-      cache.parentNamesAndChildren[
-        parentSymbolInCurrentUri.name
-      ] = targetSymbolNames;
-
-      saveCache();
-      log(Config.classLensCache);
+        saveCache();
+        log(Config.classLensCache);
+        return getCodeLens(
+          targetSymbols,
+          parentSymbolInCurrentUri,
+          cache.parentSymbols
+        );
+      }
+      // if we are here, then it is the first time we get symbols from parent uri.
+      const symbolsRemote = await getSymbolsByUri(location.uri);
+      // save to cache if cache doesnt have parent symbols.
+      log("request symbols for parent:");
+      if (
+        !Config.classLensCache.find(
+          s => s.parentUriFspath === location.uri.fsPath
+        )
+      ) {
+        Config.classLensCache.push({
+          childFileNames: { [currentFileName]: currentFileName },
+          parentNamesAndChildren: {
+            [parentSymbolInCurrentUri.name]: targetSymbolNames
+          },
+          parentUriFspath: location.uri.fsPath,
+          parentSymbols: convertToCachedSymbols(symbolsRemote)
+        });
+        saveCache();
+        log(Config.classLensCache);
+      }
       return getCodeLens(
         targetSymbols,
         parentSymbolInCurrentUri,
-        cache.parentSymbols
+        convertToCachedSymbols(symbolsRemote)
       );
     }
-    // if we are here, then it is the first time we get symbols from parent uri.
-    const symbolsRemote = await getSymbolsByUri(location.uri);
-    // save to cache if cache doesnt have parent symbols.
-    log("request symbols for parent:");
-    if (
-      !Config.classLensCache.find(
-        s => s.parentUriFspath === location.uri.fsPath
-      )
-    ) {
-      Config.classLensCache.push({
-        childFileNames: { [currentFileName]: currentFileName },
-        parentNamesAndChildren: {
-          [parentSymbolInCurrentUri.name]: targetSymbolNames
-        },
-        parentUriFspath: location.uri.fsPath,
-        parentSymbols: convertToCachedSymbols(symbolsRemote)
-      });
-      saveCache();
-      log(Config.classLensCache);
-    }
-    return getCodeLens(
-      targetSymbols,
-      parentSymbolInCurrentUri,
-      convertToCachedSymbols(symbolsRemote)
-    );
+
+    return [];
   } catch (error) {
     throw error;
   }

@@ -66,17 +66,17 @@ export class ClassLensProvider implements CodeLensProvider {
         )
       );
 
-      uniqueClasses.forEach(className => {
+      for (let className of uniqueClasses) {
         const classSymbol = symbols.find(s => s.name === className);
         if (!classSymbol) {
-          return;
+          continue;
         }
-        const baseClassSymbol = getBaseClassSymbol(
+        const baseClassSymbol = await getBaseClassSymbol(
           document,
           classSymbol,
           symbols
         );
-        const interfaceSymbols = getInterfaceSymbols(
+        const interfaceSymbols = await getInterfaceSymbols(
           document,
           classSymbol,
           symbols
@@ -86,7 +86,8 @@ export class ClassLensProvider implements CodeLensProvider {
         } else {
           classParents[className] = interfaceSymbols;
         }
-      });
+      }
+
       log("unique classes:");
       log(uniqueClasses);
       log("class parents:");

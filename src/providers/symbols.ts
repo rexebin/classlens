@@ -1,16 +1,23 @@
 "use strict";
 
 import {
+  Position,
   SymbolInformation,
+  SymbolKind,
   TextDocument,
   Uri,
   commands,
-  workspace,
-  Position,
-  SymbolKind
+  workspace
 } from "vscode";
-import { hasParents, baseClassRegex, getAllDefinitions } from ".";
+import {
+  baseClassRegex,
+  convertToCachedSymbols,
+  getAllDefinitions,
+  hasParents
+} from ".";
 import { log } from "../commands/logger";
+import { Config } from "../configuration";
+import { saveCache } from "../extension";
 
 /**
  *
@@ -62,23 +69,35 @@ export async function getSymbolsOpenedUri(
  * @param symbols symbols of current document.
  * @returns symbols of interfaces of given class.
  */
-export function getInterfaceSymbols(
+export async function getInterfaceSymbols(
   doc: TextDocument,
   classSymbol: SymbolInformation,
   symbols: SymbolInformation[]
-): SymbolInformation[] {
+): Promise<SymbolInformation[]> {
   const interfaces = getInterfaceNames(doc, classSymbol);
   // get interface symbols by names from given symbols list.
   let interfaceSymbols: SymbolInformation[] = [];
-  interfaces.forEach(i => {
-    const s = symbols.filter(
+  for (let i of interfaces) {
+    const s = symbols.find(
       // symbols often doesn't include generic part, remove it to find all valid interface symbols
       s => s.name.replace(/(<).+(>)/, "") === i.replace(/(<).+(>)/, "")
     );
-    if (s && s.length > 0) {
-      interfaceSymbols.push(s[0]);
+    if (s) {
+      interfaceSymbols.push(s);
+      continue;
     }
-  });
+    const symbol = await fetchParentSymbolRemote(
+      doc,
+      classSymbol,
+      symbols,
+      i,
+      SymbolKind.Interface
+    );
+    if (symbol) {
+      interfaceSymbols.push(symbol);
+    }
+  }
+
   return interfaceSymbols;
 }
 
@@ -109,6 +128,7 @@ export function getInterfaceNames(
       interfaces = interfaces.map(i => i.trim());
     }
   }
+  log(interfaces);
   return interfaces;
 }
 
@@ -121,20 +141,35 @@ export function getInterfaceNames(
  *
  * @returns Symbol of base class of the given class.
  */
-export function getBaseClassSymbol(
+export async function getBaseClassSymbol(
   doc: TextDocument,
   classSymbol: SymbolInformation,
   symbols: SymbolInformation[]
-): SymbolInformation | undefined {
+): Promise<SymbolInformation | undefined> {
   let parentClassName = getBaseClassName(doc, classSymbol);
   if (!parentClassName) {
     return;
   }
-  return symbols.filter(
+  var result = symbols.find(
     // remove generic signature.
     s =>
       s.name.replace(/(<).+(>)/, "") === parentClassName.replace(/(<).+(>)/, "")
-  )[0];
+  );
+
+  if (result) {
+    return result;
+  }
+
+  const symbol = await fetchParentSymbolRemote(
+    doc,
+    classSymbol,
+    symbols,
+    parentClassName,
+    SymbolKind.Class
+  );
+  if (symbol) {
+    return symbol;
+  }
 }
 
 export function getBaseClassName(
@@ -152,7 +187,7 @@ export function getBaseClassName(
     0,
     parentsAndInterfaces.indexOf("{")
   );
-  let matches = parentsAndInterfaces.match(/(extends)\s+(\w+)/);
+  let matches = parentsAndInterfaces.match(/(extends)\s+((\w|\.)+)/);
   if (!matches || !matches[0]) {
     return "";
   }
@@ -232,4 +267,94 @@ export async function getSymbolsForModules(
   log("module symbols:");
   log(moduleSymbols);
   return moduleSymbols;
+}
+
+export async function fetchParentSymbolRemote(
+  document: TextDocument,
+  classSymbol: SymbolInformation,
+  symbols: SymbolInformation[],
+  parentClassName: string,
+  kind: SymbolKind
+): Promise<SymbolInformation | undefined> {
+  const text = document.getText(classSymbol.location.range);
+  const position = getParentClassPosition(
+    parentClassName,
+    text,
+    classSymbol.location.range.start.line,
+    kind
+  );
+  if (!position) {
+    return;
+  }
+  log(document.getText(document.getWordRangeAtPosition(position)));
+  const locations = await getAllDefinitions(document.uri, position);
+  log(locations);
+  const targetSymbols = symbols.filter(
+    symbol =>
+      (symbol.kind === SymbolKind.Property ||
+        symbol.kind === SymbolKind.Method) &&
+      symbol.containerName === classSymbol.name
+  );
+  const targetSymbolNames = targetSymbols.map(s => s.name);
+  for (let location of locations) {
+    log(typeof location);
+    log(location);
+    if (location && location.uri) {
+      log(location);
+      const symbols = await getSymbolsByUri(location.uri);
+      if (
+        !Config.classLensCache.find(
+          s => s.parentUriFspath === location.uri.fsPath
+        )
+      ) {
+        Config.classLensCache.push({
+          childFileNames: { [document.uri.fsPath]: document.uri.fsPath },
+          parentNamesAndChildren: {
+            [parentClassName]: targetSymbolNames
+          },
+          parentUriFspath: location.uri.fsPath,
+          parentSymbols: convertToCachedSymbols(symbols)
+        });
+        saveCache();
+        log(Config.classLensCache);
+      }
+      return symbols.find(s => s.name === parentClassName);
+    }
+  }
+}
+
+function getParentClassPosition(
+  parentClassName: string,
+  text: string,
+  startLine: number,
+  kind: SymbolKind
+): Position | undefined {
+  if (!parentClassName) {
+    return;
+  }
+
+  let parentClassNameLine: number = 0;
+  let parentClassCharacter: number = 0;
+  if (kind === SymbolKind.Class) {
+    let matches = text.match(/(extends)\s+((\w|\.)+)/);
+    if (matches && matches.length > 0) {
+      const splits = text.split(matches[0]);
+      const newLines = splits[0].match(/[\r\n]/g);
+      if (newLines) {
+        parentClassNameLine = newLines.length;
+      }
+    }
+  }
+
+  if (kind === SymbolKind.Interface) {
+  }
+
+  log("start Line:" + startLine);
+  log("parent line:" + parentClassNameLine);
+  log("parent char:" + parentClassCharacter);
+
+  return new Position(
+    startLine + parentClassNameLine,
+    parentClassCharacter + 1
+  );
 }

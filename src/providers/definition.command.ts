@@ -1,6 +1,6 @@
 "use strict";
 
-import { Uri, Position, Location, commands } from "vscode";
+import { Location, Position, Uri, commands } from "vscode";
 
 /**
  * Execute definition provider to look for parent class/interface's location.
@@ -9,21 +9,22 @@ import { Uri, Position, Location, commands } from "vscode";
  * @returns a promise of parent class/interface's location
  */
 
-export async function getFirstDefinitionLocation(
-  uri: Uri,
-  position: Position
-): Promise<Location | undefined> {
-  try {
-    const locations = await getAllDefinitions(uri, position);
+// export async function getFirstDefinitionLocation(
+//   uri: Uri,
+//   position: Position
+// ): Promise<Location | undefined> {
+//   try {
+//     const locations = await getAllDefinitions(uri, position);
 
-    if (locations) {
-      return locations[0];
-    }
-    return;
-  } catch (error) {
-    throw error;
-  }
-}
+//     if (locations) {
+//       log(locations[0]);
+//       return locations[0];
+//     }
+//     return;
+//   } catch (error) {
+//     throw error;
+//   }
+// }
 
 export async function getAllDefinitions(
   uri: Uri,
