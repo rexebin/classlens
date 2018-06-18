@@ -4,7 +4,7 @@ import { CodeLens, SymbolInformation, SymbolKind, Uri } from "vscode";
 import { saveCache } from "../extension";
 import { CachedSymbol } from "../models";
 import { getFirstDefinitionLocation } from "./definition.command";
-import { getSymbolsByUri } from "./symbols";
+import { getSymbolsByUri, ParentSymbol } from "./symbols";
 import { convertToCachedSymbols } from "./util";
 import { Config } from "../configuration";
 import { log } from "../commands/logger";
@@ -20,8 +20,9 @@ import { log } from "../commands/logger";
  */
 export function getCodeLens(
   targetSymbols: SymbolInformation[],
-  parentSymbol: SymbolInformation,
-  symbolsOfParent: CachedSymbol[]
+  parentSymbol: ParentSymbol,
+  symbolsOfParent: CachedSymbol[],
+  symbolKind: SymbolKind
 ): CodeLens[] {
   let codelens: CodeLens[] = [];
   targetSymbols.forEach(targetSymbol => {
@@ -35,16 +36,14 @@ export function getCodeLens(
     if (!parentPropertyMethodSymbol) {
       return;
     }
-    const parentSymbolInParent = symbolsOfParent.find(
-      s => s.name === parentSymbol.name
+    const parentSymbolsInParent = symbolsOfParent.filter(
+      s => s.name === parentSymbol.name && s.kind === symbolKind
     );
-    if (!parentSymbolInParent) {
+    if (parentSymbolsInParent.length === 0) {
       return;
     }
 
-    const kind = parentSymbolInParent.kind;
-
-    if (kind === "class") {
+    if (symbolKind === SymbolKind.Class) {
       codelens.push(
         new CodeLens(targetSymbol.location.range, {
           command: "classLens.gotoParent",
@@ -52,7 +51,7 @@ export function getCodeLens(
           arguments: [parentPropertyMethodSymbol]
         })
       );
-    } else if (kind === "interface") {
+    } else if (symbolKind === SymbolKind.Interface) {
       codelens.push(
         new CodeLens(targetSymbol.location.range, {
           command: "classLens.gotoParent",
@@ -76,10 +75,11 @@ export function getCodeLens(
  * @param symbolsInCurrentUri All symbols of current document
  */
 export async function getCodeLensForParents(
-  parentSymbolInCurrentUri: SymbolInformation,
+  parentSymbolInCurrentUri: ParentSymbol,
   currentUri: Uri,
   symbolsInCurrentUri: SymbolInformation[],
-  className: string
+  className: string,
+  symbolKind: SymbolKind
 ): Promise<CodeLens[]> {
   try {
     // get a list of target symbols to get codelens for, limited to a given class.
@@ -104,7 +104,8 @@ export async function getCodeLensForParents(
         return getCodeLens(
           targetSymbols,
           parentSymbolInCurrentUri,
-          convertToCachedSymbols([...parentSymbolsInCurrentUri, parent])
+          convertToCachedSymbols([...parentSymbolsInCurrentUri, parent]),
+          symbolKind
         );
       }
       return [];
@@ -129,19 +130,20 @@ export async function getCodeLensForParents(
       return getCodeLens(
         targetSymbols,
         parentSymbolInCurrentUri,
-        cache.parentSymbols
+        cache.parentSymbols,
+        symbolKind
       );
     }
     //if we are here, then the parent symbol is not in the current file and not in cache.
     // excuete definition provider to look for the parent file.
     const location = await getFirstDefinitionLocation(
       currentUri,
-      parentSymbolInCurrentUri.location.range.start
+      parentSymbolInCurrentUri.position
     );
 
     log("get definition for parent:");
 
-    if (!location) {
+    if (!location || !location.uri) {
       log("location not found");
       return [];
     }
@@ -168,7 +170,8 @@ export async function getCodeLensForParents(
       return getCodeLens(
         targetSymbols,
         parentSymbolInCurrentUri,
-        cache.parentSymbols
+        cache.parentSymbols,
+        symbolKind
       );
     }
     // if we are here, then it is the first time we get symbols from parent uri.
@@ -194,7 +197,8 @@ export async function getCodeLensForParents(
     return getCodeLens(
       targetSymbols,
       parentSymbolInCurrentUri,
-      convertToCachedSymbols(symbolsRemote)
+      convertToCachedSymbols(symbolsRemote),
+      symbolKind
     );
   } catch (error) {
     throw error;

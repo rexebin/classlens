@@ -4,11 +4,12 @@ import {
   CancellationToken,
   CodeLens,
   CodeLensProvider,
+  SymbolKind,
   TextDocument
 } from "vscode";
 import { baseClassRegex, hasParents, interfaceRegex } from ".";
 import { log } from "../commands/logger";
-import { ClassParents } from "../models";
+import { ClassInterfaces, ClassParent } from "../models";
 import { getCodeLensForParents } from "./codelens-generator";
 import {
   getBaseClassSymbol,
@@ -58,7 +59,8 @@ export class ClassLensProvider implements CodeLensProvider {
       const moduleSymbols = await getSymbolsForModules(document, symbols);
       symbols = [...symbols, ...moduleSymbols];
 
-      let classParents: ClassParents = {};
+      let classParent: ClassParent = {};
+      let classInterfaces: ClassInterfaces = {};
 
       const uniqueClasses = Array.from(
         new Set(
@@ -66,42 +68,54 @@ export class ClassLensProvider implements CodeLensProvider {
         )
       );
 
-      uniqueClasses.forEach(className => {
+      for (let className of uniqueClasses) {
         const classSymbol = symbols.find(s => s.name === className);
         if (!classSymbol) {
-          return;
+          return [];
         }
-        const baseClassSymbol = getBaseClassSymbol(
+        const baseClassSymbol = await getBaseClassSymbol(
           document,
           classSymbol,
           symbols
         );
-        const interfaceSymbols = getInterfaceSymbols(
+        classInterfaces[className] = await getInterfaceSymbols(
           document,
           classSymbol,
           symbols
         );
         if (baseClassSymbol) {
-          classParents[className] = [baseClassSymbol, ...interfaceSymbols];
-        } else {
-          classParents[className] = interfaceSymbols;
+          classParent[className] = baseClassSymbol;
         }
-      });
+      }
       log("unique classes:");
       log(uniqueClasses);
       log("class parents:");
-      log(classParents);
+      log(classParent);
       let codeLens: CodeLens[] = [];
-      const classNames = Object.keys(classParents);
+      let classNames = Object.keys(classParent);
       for (let className of classNames) {
-        for (let symbol of classParents[className]) {
+        codeLens = [
+          ...codeLens,
+          ...(await getCodeLensForParents(
+            classParent[className],
+            document.uri,
+            symbols,
+            className,
+            SymbolKind.Class
+          ))
+        ];
+      }
+      classNames = Object.keys(classInterfaces);
+      for (let className of classNames) {
+        for (let symbol of classInterfaces[className]) {
           codeLens = [
             ...codeLens,
             ...(await getCodeLensForParents(
               symbol,
               document.uri,
               symbols,
-              className
+              className,
+              SymbolKind.Interface
             ))
           ];
         }

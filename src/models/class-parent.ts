@@ -1,5 +1,9 @@
-import { SymbolInformation } from "vscode";
+import { ParentSymbol } from "../providers";
 
-export interface ClassParents {
-  [className: string]: SymbolInformation[];
+export interface ClassParent {
+  [className: string]: ParentSymbol;
+}
+
+export interface ClassInterfaces {
+  [className: string]: ParentSymbol[];
 }

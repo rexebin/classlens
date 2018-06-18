@@ -1,3 +1,5 @@
+import { SymbolKind } from "vscode";
+
 "use strict";
 
 export interface ClassLensCache {
@@ -14,6 +16,6 @@ export class CachedSymbol {
     public startChar: number,
     public name: string,
     public containerName: string,
-    public kind: string
+    public kind: SymbolKind
   ) {}
 }

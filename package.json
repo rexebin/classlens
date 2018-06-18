@@ -1,9 +1,8 @@
 {
   "name": "classlens",
   "displayName": "ClassLens",
-  "description":
-    "ClassLens shows class's relationships with its interfaces and parent class in the form of CodeLens",
-  "version": "0.6.2",
+  "description": "ClassLens shows class's relationships with its interfaces and parent class in the form of CodeLens",
+  "version": "0.7.0",
   "publisher": "rexebin",
   "engines": {
     "vscode": "^1.22.0"
@@ -12,8 +11,13 @@
   "repository": {
     "url": "https://github.com/rexebin/classlens"
   },
-  "categories": ["Languages", "Other"],
-  "activationEvents": ["*"],
+  "categories": [
+    "Languages",
+    "Other"
+  ],
+  "activationEvents": [
+    "*"
+  ],
   "contributes": {
     "configuration": {
       "title": "Side by side",
