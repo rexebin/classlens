@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.7.1
+
+Add Typescript as dependency.
+
 ## 0.7.0
 
 Now works for vscode 1.2.4.
